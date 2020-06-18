@@ -1,0 +1,34 @@
+
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v1
+    - run: pip install pytest
+    - name: Install requirements
+      run: |
+        pip install -r requirements.txt
+    - name: Install our alphazero library
+      run: |
+        pip install -e .
+    - name: Run PyTest tests
+      run: |
+        pytest tests/
+  flake8:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v1
+    - run: pip install flake8
+    - name: Run flake8
+      run: |
+        flake8 .
