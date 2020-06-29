@@ -28,23 +28,23 @@ def write_distances(q, count):
 
     # one folder up, into the 'data' folder
     current_dir = path.dirname(path.abspath(__file__))
-    file_loc = path.join(current_dir, '..', 'data', 'distance_infos.csv')
+    file_loc = path.join(current_dir, 'data', 'distance_infos.csv')
 
     colnames = ['map', 'areaId_1', 'areaId_2', 'graph_distance']
 
     with open(file_loc, 'w') as f:
         f.write(','.join(colnames) + '\n')
 
-        time.sleep(30)
-        while written < (8 * 8) + 2:
+        time.sleep(3)
+        while written < (899 * 899):
             try:
                 infos = q.get(timeout=5)
             except queue.Empty:
                 print('    Distances queue empty!    ')
                 time.sleep(30)
                 continue
-
-            f.write(','.join(infos) + '\n')
+            print(infos)
+            f.write(','.join(map(str, infos)) + '\n')
             written += 1
             if written % 1000 == 0:
                 print(f'\rCalculated {written}/{count.value} in '
@@ -56,19 +56,27 @@ def write_distances(q, count):
 
 if __name__ == '__main__':
     import multiprocessing
+    import sys
 
     params = multiprocessing.Queue()
     distances = multiprocessing.Queue()
 
     count = multiprocessing.Value('i', 0)
-    infos_q = multiprocessing.Queue()
 
-    for i in range(1, 9):
-        for j in range(1, 9):
-            params.put({'map': 'de_mirage',
-                        'a1': i,
-                        'a2': j,
-                        })
+    if sys.argv[1] == 'mirage':
+        for i in range(1, 900):
+            for j in range(1, 900):
+                params.put({'map': 'de_mirage',
+                            'a1': i,
+                            'a2': j,
+                            })
+    elif sys.argv[1] == 'dust2':
+        for i in range(1, 900):
+            for j in range(1, 900):
+                params.put({'map': 'de_dust2',
+                            'a1': i,
+                            'a2': j,
+                            })
 
     procs = {}
 
