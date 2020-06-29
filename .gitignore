@@ -2,6 +2,12 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.dem
+*.xml
+*.csv
+data/
+*.sublime-project
+*.sublime-workspace
 
 # C extensions
 *.so
