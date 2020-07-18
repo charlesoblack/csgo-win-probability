@@ -17,7 +17,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install -r requirements.txt
-    - name: Install our alphazero library
+    - name: Install csgo_wp library locally
       run: |
         pip install -e .
     - name: Run PyTest tests
