@@ -74,6 +74,8 @@ class CNNModel(torch.nn.Module):
 
         x = self.softmax(x)
 
+        x = x.squeeze(1)
+
         return x
 
 
