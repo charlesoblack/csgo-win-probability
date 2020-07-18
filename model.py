@@ -5,10 +5,17 @@ import torch
 
 class CNNModel(torch.nn.Module):
 
-    def __init__(self):
+    def __init__(self,
+                 batch_norm=True,
+                 activation='ReLU',
+                 activation_params={},
+                 ):
         super().__init__()
 
-        self.activation = torch.nn.ReLU()
+        # pure unadultered genius
+        self.activation = torch.nn.__dict__[activation](**activation_params)
+
+        self.bn_activated = batch_norm
 
         # first convolution section
         self.conv_1 = torch.nn.Conv2d(in_channels=1,
@@ -33,11 +40,19 @@ class CNNModel(torch.nn.Module):
                                             stride=1,
                                             padding=0,
                                             )
-        self.norm_conv = torch.nn.BatchNorm2d(num_features=1)
+
+        if self.bn_activated:
+            self.norm_conv = torch.nn.BatchNorm2d(num_features=1)
+        else:
+            self.norm_conv = torch.nn.Identity()
 
         # linear section
         self.linear = torch.nn.Linear(in_features=16, out_features=2)
-        self.norm_linear = torch.nn.BatchNorm1d(num_features=1)
+
+        if self.bn_activated:
+            self.norm_linear = torch.nn.BatchNorm1d(num_features=1)
+        else:
+            self.norm_linear = torch.nn.Identity()
 
         # softmax
         self.softmax = torch.nn.Softmax(dim=-1)
