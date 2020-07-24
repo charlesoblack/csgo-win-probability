@@ -71,4 +71,4 @@ def transform_data(df, game_map):
 
     t_2 = torch.Tensor(additional_data.values).view(-1, 10, 2)
 
-    return t, t_2
+    return torch.cat((t, t_2), dim=2)

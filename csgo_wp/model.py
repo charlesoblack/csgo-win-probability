@@ -47,7 +47,7 @@ class CNNModel(torch.nn.Module):
             self.norm_conv = torch.nn.Identity()
 
         # linear section
-        self.linear = torch.nn.Linear(in_features=16, out_features=2)
+        self.linear = torch.nn.Linear(in_features=24, out_features=2)
 
         if self.bn_activated:
             self.norm_linear = torch.nn.BatchNorm1d(num_features=1)
@@ -66,7 +66,7 @@ class CNNModel(torch.nn.Module):
         x = self.activation(x)
         x = self.norm_conv(x)
         x = self.maxpool_2(x)
-        x = x.reshape(-1, 1, 16)
+        x = x.reshape(-1, 1, 24)
 
         x = self.linear(x)
         x = self.activation(x)
@@ -96,7 +96,7 @@ class FCModel(torch.nn.Module):
         self.bn_activated = batch_norm
 
         # linear stuff
-        self.input_size = 100
+        self.input_size = 120
         self.hidden_size_1 = hidden_size_1
         self.hidden_size_2 = hidden_size_2
         self.hidden_size_3 = hidden_size_3
@@ -124,6 +124,7 @@ class FCModel(torch.nn.Module):
     def forward(self, x):
         # flatten but keep batch size
         x = x.flatten(start_dim=1)
+        x = x.unsqueeze(1)
 
         x = self.linear_1(x)
         x = self.activation(x)
@@ -147,8 +148,12 @@ class FCModel(torch.nn.Module):
 
 
 if __name__ == '__main__':
+    t = torch.rand(size=(5, 1, 10, 12))
+
     mod = CNNModel()
 
-    t = torch.rand(size=(5, 1, 10, 10))
+    print(mod(t))
+
+    mod = FCModel()
 
     print(mod(t))
