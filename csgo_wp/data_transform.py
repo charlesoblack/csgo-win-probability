@@ -32,10 +32,16 @@ def transform_data(df, game_map):
     df.drop_duplicates(inplace=True)
 
     for c in ['X', 'Y', 'Z']:
-        df[f'pos{c}'] = df[f'pos{c}'].astype(float)
-        df['areaId'] = df['areaId'].astype(int)
+        df[f'pos{c}'] = df[c].astype(float)
 
-    df['hp'] = df['hp'].astype(int)
+    df['areaId'] = df['AreaId'].astype(int)
+
+    df['hp'] = df['Hp'].astype(int)
+    df.rename(columns={'Side': 'side',
+                       'PlayerId': 'name',
+                       'Tick': 'tick',
+                       },
+              inplace=True)
 
     df = df[['side',
              'hp',
@@ -45,7 +51,7 @@ def transform_data(df, game_map):
              'posZ',
              'tick',
              'areaId',
-             ]]
+             ]].copy()  # shut up the warnings
     df['pos'] = df[['posX', 'posY', 'posZ']].values.tolist()
 
     merged = df.merge(df, on='tick')
@@ -71,4 +77,4 @@ def transform_data(df, game_map):
 
     t_2 = torch.Tensor(additional_data.values).view(-1, 10, 2)
 
-    return torch.cat((t, t_2), dim=2)
+    return torch.cat((t, t_2), dim=2).unsqueeze(1)
