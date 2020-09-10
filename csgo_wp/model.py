@@ -148,7 +148,12 @@ class FCModel(torch.nn.Module):
 
 
 if __name__ == '__main__':
-    t = torch.rand(size=(5, 1, 10, 12))
+    import pandas as pd
+    from data_transform import transform_data
+
+    # t = torch.rand(size=(5, 1, 10, 12))
+    data = pd.read_csv('/home/gpt/Desktop/example_frames.csv', nrows=100)
+    t = transform_data(data, 'de_inferno')
 
     mod = CNNModel()
 
