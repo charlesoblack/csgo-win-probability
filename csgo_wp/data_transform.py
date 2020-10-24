@@ -38,10 +38,10 @@ def transform_data(df, game_map):
         df[c] = df[c].astype(float)
 
     df['AreaId'] = df['AreaId'].astype(int)
-    df['Hp'] = df['Hp'].astype(int)
+    df['IsAlive'] = df['IsAlive'].astype(bool)
 
     df = df[['Side',
-             'Hp',
+             'IsAlive',
              'PlayerSteamId',
              'X',
              'Y',
@@ -67,7 +67,7 @@ def transform_data(df, game_map):
     t = torch.Tensor(distance_matrix.values).view(-1, 10, 10)
 
     additional_data = (df.groupby(['Tick', 'PlayerSteamId'])
-                         .agg({'Hp': is_alive,  # how about returning hp?
+                         .agg({'IsAlive': 'any',  # how about returning hp?
                                'Side': is_ct,
                                })
                          .astype(int)
