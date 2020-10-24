@@ -231,7 +231,7 @@ class CSGODataset(torch.utils.data.Dataset):
                                     & (self.targets['MapName'] == map_name)
                                     & (self.targets['RoundNum'] == round_num)]
 
-        target = (round_result['RoundWinnerSide'] == 'CT').astype(int)
+        target = (round_result['WinningSide'] == 'CT').astype(int)
         target = torch.Tensor(target.values)
 
         return data, target.view(1)
