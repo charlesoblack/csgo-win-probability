@@ -170,11 +170,11 @@ class CSGODataset(torch.utils.data.Dataset):
             self.n_samples += tick_count
         print('Done!')
 
-        self.targets = pd.read_csv(folder + 'example_rounds.csv',
+        self.targets = pd.read_csv(folder + 'csgo_rounds_dust2.csv',
                                    usecols=['MatchId',
                                             'MapName',
                                             'RoundNum',
-                                            'RoundWinnerSide',
+                                            'WinningSide',
                                             ])
 
     def __len__(self):
