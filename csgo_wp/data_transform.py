@@ -42,7 +42,7 @@ def transform_data(df, game_map):
 
     df = df[['Side',
              'Hp',
-             'SteamId',
+             'PlayerSteamId',
              'X',
              'Y',
              'Z',
@@ -58,15 +58,15 @@ def transform_data(df, game_map):
 
     area_dist = partial(area_dist_all, game_map=game_map)
 
-    distance_matrix = merged.pivot_table(index=['Tick', 'SteamId_x'],
-                                         columns='SteamId_y',
+    distance_matrix = merged.pivot_table(index=['Tick', 'PlayerSteamId_x'],
+                                         columns='PlayerSteamId_y',
                                          values='area_diff',
                                          aggfunc=area_dist,
                                          )
 
     t = torch.Tensor(distance_matrix.values).view(-1, 10, 10)
 
-    additional_data = (df.groupby(['Tick', 'SteamId'])
+    additional_data = (df.groupby(['Tick', 'PlayerSteamId'])
                          .agg({'Hp': is_alive,  # how about returning hp?
                                'Side': is_ct,
                                })
@@ -131,7 +131,7 @@ class CSGODataset(torch.utils.data.Dataset):
                 subset = df[(df['MatchId'] == combo[0])
                             & (df['MapName'] == combo[1])].copy()
 
-                player_count = subset['SteamId'].nunique()
+                player_count = subset['PlayerSteamId'].nunique()
 
                 if player_count < 10:
                     # if we have less than 10 players, ignore this dataframe
