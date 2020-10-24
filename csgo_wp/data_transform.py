@@ -108,7 +108,39 @@ class CSGODataset(torch.utils.data.Dataset):
             os.makedirs(self.folder + 'test')
 
             print('Loading entire dataframe into memory...')
-            df = pd.read_csv(self.file_loc)
+
+            frames_columns = ['MatchId',
+                              'MapName',
+                              'RoundNum',
+                              'Tick',
+                              'Second',
+                              'PlayerId',
+                              'PlayerSteamId',
+                              'TeamId',
+                              'Side',
+                              'X',
+                              'Y',
+                              'Z',
+                              'ViewX',
+                              'ViewY',
+                              'AreaId',
+                              'Hp',
+                              'Armor',
+                              'IsAlive',
+                              'IsFlashed',
+                              'IsAirborne',
+                              'IsDucking',
+                              'IsScoped',
+                              'IsWalking',
+                              'EqValue',
+                              'HasHelmet',
+                              'HasDefuse',
+                              'DistToBombsiteA',
+                              'DistToBombsiteB',
+                              'Created',
+                              'Updated']
+
+            df = pd.read_csv(self.file_loc, names=frames_columns)
 
             print('Getting match/map combinations...')
             # list of lists
