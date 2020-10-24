@@ -93,13 +93,14 @@ class CSGODataset(torch.utils.data.Dataset):
         self.folder = folder + 'match-map-unique/'
         self.split = dataset_split
         self.split_folder = self.folder + dataset_split
+        bad_round_count = 0
 
         if transform is None:
             raise ValueError('Transform required')
 
         if not os.path.exists(self.folder):
             print('Train/val/test splits not found')
-            self.file_loc = folder + 'example_frames.csv'
+            self.file_loc = folder + 'csgo_playerframes_dust2.csv'
             # parse csv and separate into folder
 
             os.makedirs(self.folder + 'train')
@@ -109,11 +110,10 @@ class CSGODataset(torch.utils.data.Dataset):
             print('Loading entire dataframe into memory...')
             df = pd.read_csv(self.file_loc)
 
-            print('Getting match/map/round combinations...')
+            print('Getting match/map combinations...')
             # list of lists
             match_map_combos = (df[['MatchId',
                                     'MapName',
-                                    'RoundNum',
                                     ]].drop_duplicates()
                                       .values.tolist())
 
@@ -129,20 +129,26 @@ class CSGODataset(torch.utils.data.Dataset):
                     split = 'val'
 
                 subset = df[(df['MatchId'] == combo[0])
-                            & (df['MapName'] == combo[1])
-                            & (df['RoundNum'] == combo[2])].copy()
+                            & (df['MapName'] == combo[1])].copy()
+
                 player_count = subset['SteamId'].nunique()
 
                 if player_count < 10:
                     # if we have less than 10 players, ignore this dataframe
                     # hopefully this doesn't affect the train/test split ratio
                     # too much
+                    bad_round_count += 1
                     continue
 
-                tick_count = subset['Tick'].nunique()
+                for round_num in subset['RoundNum'].unique():
 
-                subset.to_csv(f'{self.folder}{split}/match-{combo[0]}-'
-                              f'{combo[1]}-{combo[2]}-{tick_count}.csv')
+                    single_round = subset[subset['RoundNum'] == round_num]
+
+                    tick_count = single_round['Tick'].nunique()
+
+                    subset.to_csv(f'{self.folder}{split}/match-{combo[0]}-'
+                                  f'{combo[1]}-{round_num}-{tick_count}.csv')
+            print(f'Found {bad_round_count} rounds with fewer than 10 players')
             print('Data written to disk')
 
         self.transform = transform
