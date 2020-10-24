@@ -4,8 +4,10 @@ import torch
 from csgo.analytics.distance import point_distance, area_distance
 from functools import partial
 import os
-from pathlib import Path
 import pandas as pd
+from collections import defaultdict
+import pickle
+import numpy as np
 
 
 def euclidean_distance(x, game_map):
@@ -89,23 +91,27 @@ class CSGODataset(torch.utils.data.Dataset):
     def __init__(self,
                  folder='G:/datasets/csgo/',
                  transform=None,
-                 dataset_split='train'):
-        self.folder = folder + 'match-map-unique/'
+                 dataset_split='train',
+                 rng_seed=13):
+        self.rng_seed = rng_seed
+        torch.manual_seed(rng_seed)
+        np.random.seed(rng_seed)
+
         self.split = dataset_split
-        self.split_folder = self.folder + dataset_split
+
         bad_round_count = 0
 
         if transform is None:
             raise ValueError('Transform required')
 
-        if not os.path.exists(self.folder):
+        if not os.path.exists(folder + 'test'):
             print('Train/val/test splits not found')
-            self.file_loc = folder + 'csgo_playerframes_dust2.csv'
-            # parse csv and separate into folder
 
-            os.makedirs(self.folder + 'train')
-            os.makedirs(self.folder + 'val')
-            os.makedirs(self.folder + 'test')
+            self.file_loc = folder + 'csgo_playerframes_dust2.csv'
+
+            os.makedirs(folder + 'train')
+            os.makedirs(folder + 'val')
+            os.makedirs(folder + 'test')
 
             print('Loading entire dataframe into memory...')
 
@@ -140,7 +146,21 @@ class CSGODataset(torch.utils.data.Dataset):
                               'Created',
                               'Updated']
 
-            df = pd.read_csv(self.file_loc, names=frames_columns)
+            # only load required columns in
+            df = pd.read_csv(self.file_loc,
+                             names=frames_columns,
+                             usecols=['MatchId',
+                                      'MapName',
+                                      'RoundNum',
+                                      'Tick',
+                                      'PlayerSteamId',
+                                      'X',
+                                      'Y',
+                                      'Z',
+                                      'AreaId',
+                                      'IsAlive',
+                                      'Side',
+                                      ])
 
             print('Getting match/map combinations...')
             # list of lists
@@ -149,7 +169,9 @@ class CSGODataset(torch.utils.data.Dataset):
                                     ]].drop_duplicates()
                                       .values.tolist())
 
-            print('Writing combinations to train/val/test folders...')
+            splits = defaultdict(list)
+
+            print('Dropping bogus rounds...')
             for combo in match_map_combos:
                 value = torch.rand(1).item()
 
@@ -175,66 +197,62 @@ class CSGODataset(torch.utils.data.Dataset):
                         # hopefully this doesn't affect the train/test split
                         # ratio too much
                         bad_round_count += 1
+                        # drop the rows with the bogus round
                         continue
 
-                    game_round.to_csv(f'{self.folder}{split}/match-{combo[0]}-'
-                                      f'{combo[1]}-{round_num}-{tick_count}'
-                                      f'.csv')
+                    splits[split].append(game_round)
+
             print(f'Found {bad_round_count} rounds with fewer than 10 players')
-            print('Data written to disk')
 
-        self.transform = transform
+            self.transform = transform
 
-        self.folder = Path(self.split_folder)
-        self.matchups = list(self.folder.glob('*.csv'))
+            for k, v in splits.items():
+                with open(self.folder + k + f'/{k}.pckl', 'wb') as f:
+                    pickle.dump(v, f)
 
-        self.matchup_idx_by_sample_idx = {}
-        self.n_samples = 0
+            self.raw_data = splits[self.split]
+            del splits
+        else:
+            with open(f'{self.folder}{self.split}/{self.split}.pckl',
+                      'rb') as f:
+                self.raw_data = pickle.load(f)
 
-        print('Calculating sample index offsets...')
+        self.data = []
+        self.targets = []
 
-        for idx, matchup in enumerate(self.matchups):
-            tick_count = int(matchup.stem.split('-')[-1])  # last component
+        self.rounds = pd.read_csv(folder + 'csgo_rounds_dust2.csv',
+                                  usecols=['MatchId',
+                                           'MapName',
+                                           'RoundNum',
+                                           'WinningSide',
+                                           ])
 
-            for i in range(self.n_samples, self.n_samples + tick_count):
-                self.matchup_idx_by_sample_idx[i] = (idx, self.n_samples)
+        print('Transforming raw data...')
 
-            self.n_samples += tick_count
+        for game_round in self.raw_data:
+            transformed = self.transform(game_round, 'de_dust2')
+            self.data.extend(transformed)
+
+            match_id = game_round['MatchId'].values[0]
+            map_name = game_round['MapName'].values[0]
+            round_num = game_round['RoundNum'].values[0]
+
+            target = self.rounds[(self.rounds['MatchId'] == match_id)
+                                 & (self.rounds['MapName'] == map_name)
+                                 & (self.rounds['RoundNum'] == round_num)]
+            target = 1 if target['WinningSide'] == 'CT' else 0
+            self.targets.extend([target for _ in range(transformed.shape[0])])
+
+        self.data = torch.Tensor(self.data)
+        self.targets = torch.Tensor(self.targets)
+
         print('Done!')
 
-        self.targets = pd.read_csv(folder + 'csgo_rounds_dust2.csv',
-                                   usecols=['MatchId',
-                                            'MapName',
-                                            'RoundNum',
-                                            'WinningSide',
-                                            ])
-
     def __len__(self):
-        return self.n_samples
+        return self.data.shape[0]
 
-    def __getitem__(self, sample_idx):
-        idx, n_samples_prior = self.matchup_idx_by_sample_idx[sample_idx]
-
-        idx_in_match = sample_idx - n_samples_prior
-
-        df = pd.read_csv(self.matchups[idx])
-        match_id = df['MatchId'].values[0]
-        map_name = df['MapName'].values[0]
-        round_num = df['RoundNum'].values[0]
-
-        transformed_df = self.transform(df, map_name)
-        transformed_df = transformed_df[idx_in_match]
-
-        data = torch.Tensor(transformed_df)
-
-        round_result = self.targets[(self.targets['MatchId'] == match_id)
-                                    & (self.targets['MapName'] == map_name)
-                                    & (self.targets['RoundNum'] == round_num)]
-
-        target = (round_result['WinningSide'] == 'CT').astype(int)
-        target = torch.Tensor(target.values)
-
-        return data, target.view(1)
+    def __getitem__(self, idx):
+        return self.data[idx], self.targets[idx]
 
 
 if __name__ == '__main__':
