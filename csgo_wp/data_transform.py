@@ -131,7 +131,16 @@ class CSGODataset(torch.utils.data.Dataset):
                 subset = df[(df['MatchId'] == combo[0])
                             & (df['MapName'] == combo[1])
                             & (df['RoundNum'] == combo[2])].copy()
+                player_count = subset['SteamId'].nunique()
+
+                if player_count < 10:
+                    # if we have less than 10 players, ignore this dataframe
+                    # hopefully this doesn't affect the train/test split ratio
+                    # too much
+                    continue
+
                 tick_count = subset['Tick'].nunique()
+
                 subset.to_csv(f'{self.folder}{split}/match-{combo[0]}-'
                               f'{combo[1]}-{combo[2]}-{tick_count}.csv')
             print('Data written to disk')
