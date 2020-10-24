@@ -163,23 +163,23 @@ class CSGODataset(torch.utils.data.Dataset):
                 subset = df[(df['MatchId'] == combo[0])
                             & (df['MapName'] == combo[1])].copy()
 
-                player_count = subset['PlayerSteamId'].nunique()
-
-                if player_count < 10:
-                    # if we have less than 10 players, ignore this dataframe
-                    # hopefully this doesn't affect the train/test split ratio
-                    # too much
-                    bad_round_count += 1
-                    continue
-
                 for round_num in subset['RoundNum'].unique():
+                    game_round = subset[subset['RoundNum'] == round_num]
+                    player_count = game_round['PlayerSteamId'].nunique()
+                    tick_count = game_round['Tick'].nunique()
+                    tick_x_players = player_count * tick_count
 
-                    single_round = subset[subset['RoundNum'] == round_num]
+                    if (player_count < 10
+                       or game_round.shape[0] != tick_x_players):
+                        # if we have less than 10 players, ignore this df
+                        # hopefully this doesn't affect the train/test split
+                        # ratio too much
+                        bad_round_count += 1
+                        continue
 
-                    tick_count = single_round['Tick'].nunique()
-
-                    subset.to_csv(f'{self.folder}{split}/match-{combo[0]}-'
-                                  f'{combo[1]}-{round_num}-{tick_count}.csv')
+                    game_round.to_csv(f'{self.folder}{split}/match-{combo[0]}-'
+                                      f'{combo[1]}-{round_num}-{tick_count}'
+                                      f'.csv')
             print(f'Found {bad_round_count} rounds with fewer than 10 players')
             print('Data written to disk')
 
