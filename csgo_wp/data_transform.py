@@ -40,9 +40,6 @@ def transform_data(df, game_map):
     df['AreaId'] = df['AreaId'].astype(int)
     df['Hp'] = df['Hp'].astype(int)
 
-    # this better not be a fractional
-    players_count = df['SteamId'].nunique()
-
     df = df[['Side',
              'Hp',
              'SteamId',
@@ -67,9 +64,7 @@ def transform_data(df, game_map):
                                          aggfunc=area_dist,
                                          )
 
-    t = torch.Tensor(distance_matrix.values).view(-1,
-                                                  players_count,
-                                                  players_count)
+    t = torch.Tensor(distance_matrix.values).view(-1, 10, 10)
 
     additional_data = (df.groupby(['Tick', 'SteamId'])
                          .agg({'Hp': is_alive,  # how about returning hp?
@@ -78,13 +73,13 @@ def transform_data(df, game_map):
                          .astype(int)
                        )
 
-    t_2 = torch.Tensor(additional_data.values).view(-1, players_count, 2)
+    t_2 = torch.Tensor(additional_data.values).view(-1, 10, 2)
 
     # return torch.cat((t, t_2), dim=2).unsqueeze(1)
     n_samples = t.shape[0]
-    result = torch.cat([t.reshape(n_samples, players_count ** 2),
-                        t_2.reshape(n_samples, players_count * 2)],
-                       dim=1).view(n_samples, players_count + 2, players_count)
+    result = torch.cat([t.reshape(n_samples, 100),
+                        t_2.reshape(n_samples, 20)],
+                       dim=1).view(n_samples, 12, 10)
 
     return result
 
