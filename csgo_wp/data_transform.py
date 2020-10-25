@@ -204,19 +204,18 @@ class CSGODataset(torch.utils.data.Dataset):
 
             print(f'Found {bad_round_count} rounds with fewer than 10 players')
 
-            self.transform = transform
-
             for k, v in splits.items():
-                with open(self.folder + k + f'/{k}.pckl', 'wb') as f:
+                with open(folder + k + f'/{k}.pckl', 'wb') as f:
                     pickle.dump(v, f)
 
             self.raw_data = splits[self.split]
             del splits
         else:
-            with open(f'{self.folder}{self.split}/{self.split}.pckl',
+            with open(f'{folder}{self.split}/{self.split}.pckl',
                       'rb') as f:
                 self.raw_data = pickle.load(f)
 
+        self.transform = transform
         self.data = []
         self.targets = []
 
@@ -229,24 +228,28 @@ class CSGODataset(torch.utils.data.Dataset):
 
         print('Transforming raw data...')
 
-        for game_round in self.raw_data:
-            transformed = self.transform(game_round, 'de_dust2')
-            self.data.extend(transformed)
+        len_data = len(self.raw_data)
 
+        for idx, game_round in enumerate(self.raw_data):
             match_id = game_round['MatchId'].values[0]
             map_name = game_round['MapName'].values[0]
             round_num = game_round['RoundNum'].values[0]
+            print(f'\rTransforming {idx +1}/{len_data}: {match_id}, '
+                  f'{map_name}, {round_num}', end='')
+            transformed = self.transform(game_round, 'de_dust2')
+            self.data.extend(transformed)
 
             target = self.rounds[(self.rounds['MatchId'] == match_id)
                                  & (self.rounds['MapName'] == map_name)
                                  & (self.rounds['RoundNum'] == round_num)]
-            target = 1 if target['WinningSide'] == 'CT' else 0
-            self.targets.extend([target for _ in range(transformed.shape[0])])
+            target = 1 if target['WinningSide'].iloc[0] == 'CT' else 0
+            self.targets.extend([target
+                                 for _ in range(transformed.shape[0])])
 
-        self.data = torch.Tensor(self.data)
+        self.data = torch.stack(self.data)
         self.targets = torch.Tensor(self.targets)
 
-        print('Done!')
+        print('\nDone!')
 
     def __len__(self):
         return self.data.shape[0]
