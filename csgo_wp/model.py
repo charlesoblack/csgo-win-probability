@@ -97,12 +97,15 @@ class ResNet(torch.nn.Module):
                  activation_params={},
                  hidden_sizes=[200, 100, 50],
                  output_size=2,
+                 batch_norm=False,
                  ):
         super().__init__()
 
         # dynamic linear stuff
         self.input_size = input_size
         self.output_size = output_size
+
+        self.bn_activated = batch_norm
 
         hidden_sizes.insert(0, self.input_size)
         hidden_sizes.append(self.output_size)
@@ -120,6 +123,10 @@ class ResNet(torch.nn.Module):
                                 activation,
                                 activation_params)
             self.blocks.append(block)
+
+            if self.bn_activated:
+                norm = torch.nn.BatchNorm1d(num_features=output_size)
+                self.blocks.append(norm)
 
         # softmax
         self.softmax = torch.nn.Softmax(dim=-1)
@@ -144,12 +151,15 @@ class CNN(torch.nn.Module):
                  options=((1, 1, 3, 1, 0, 2, 1, 0),),
                  activation='ReLU',
                  activation_params={},
+                 batch_norm=False,
                  ):
         super().__init__()
 
         # dynamic linear stuff
         self.input_size = input_size
         self.output_size = output_size
+
+        self.bn_activated = batch_norm
 
         self.conv_blocks = []
 
@@ -160,6 +170,12 @@ class CNN(torch.nn.Module):
                               activation,
                               activation_params)
             self.conv_blocks.append(block)
+
+            if self.bn_activated:
+                self.norm_conv = torch.nn.BatchNorm2d(option_set[1])
+                self.conv_blocks.append(self.norm_conv)
+            else:
+                self.norm_conv = torch.nn.Identity()
 
             # conv
             block_output_size = ((block_output_size[0]
@@ -191,6 +207,10 @@ class CNN(torch.nn.Module):
                                   activation,
                                   activation_params)
 
+        if self.bn_activated:
+            self.norm = torch.nn.BatchNorm1d(num_features=self.output_size)
+        else:
+            self.norm = torch.nn.Identity()
         # softmax
         self.softmax = torch.nn.Softmax(dim=-1)
 
@@ -204,6 +224,7 @@ class CNN(torch.nn.Module):
         x = x.reshape(-1, self.num_elements_output)
 
         x = self.linear(x)
+        x = self.norm(x)
         x = self.softmax(x)
 
         return x
@@ -217,12 +238,15 @@ class FCNN(torch.nn.Module):
                  activation_params={},
                  hidden_sizes=[200, 100, 50],
                  output_size=2,
+                 batch_norm=False,
                  ):
         super().__init__()
 
         # dynamic linear stuff
         self.input_size = input_size
         self.output_size = output_size
+
+        self.bn_activated = batch_norm
 
         hidden_sizes.insert(0, self.input_size)
         hidden_sizes.append(self.output_size)
@@ -235,6 +259,10 @@ class FCNN(torch.nn.Module):
                                 activation,
                                 activation_params)
             self.linear_blocks.append(block)
+
+            if self.bn_activated:
+                norm = torch.nn.BatchNorm1d(num_features=output_size)
+                self.linear_blocks.append(norm)
 
         # softmax
         self.softmax = torch.nn.Softmax(dim=-1)
@@ -259,7 +287,7 @@ if __name__ == '__main__':
 
     print('Testing FCNN')
 
-    mod = FCNN()
+    mod = FCNN(batch_norm=True)
 
     res = mod(t).detach()
 
@@ -268,7 +296,7 @@ if __name__ == '__main__':
 
     print('\nTesting CNN')
 
-    mod = CNN()
+    mod = CNN(batch_norm=True)
 
     res = mod(t).detach()
 
@@ -277,7 +305,7 @@ if __name__ == '__main__':
 
     print('\nTesting ResNet')
 
-    mod = ResNet()
+    mod = ResNet(batch_norm=True)
 
     res = mod(t).detach()
 
