@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#! /usr/bin/env python3
 
 import torch
 from csgo.analytics.distance import point_distance, area_distance
