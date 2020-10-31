@@ -1,30 +1,23 @@
 #! /usr/bin/env python3
 
 import torch
-from model import CNNModel, FCModel  # noqa
+from model import FCNN, CNN, ResNet  # noqa
+from sklearn.metrics import log_loss, roc_auc_score, accuracy_score
 
 
-def train(model, data, targets, optimizer, loss_fn, device):
+def train(model, loader, optimizer, loss_fn, device):
     model.train()
     model.to(device)
 
     total_loss = 0
 
-    for i, subset in data.groupby(['MatchId', 'MapName', 'RoundNum']):
-        print(f'Subset {i}')
-        t = transform_data(data, i[1]).to(device)
-
-        target = (targets[(targets['MatchId'] == i[0]) &
-                          (targets['MapName'] == i[1]) &
-                          (targets['RoundNum'] == i[2])
-                          ]['RoundWinnerSide'] == 'CT')
-
-        target = torch.full(t.shape[:1], target.astype(int).values[0]).long()
+    for index, (data, target) in enumerate(loader):
+        data = data.to(device)
         target = target.to(device)
 
         optimizer.zero_grad()
 
-        output = model(t)
+        output = model(data)
 
         loss = loss_fn(output, target)
 
@@ -34,33 +27,92 @@ def train(model, data, targets, optimizer, loss_fn, device):
 
         optimizer.step()
 
-    print(f'Total loss: {total_loss}')
+        print(f'\rBatch {index + 1}/{len(loader)}, agg loss: {total_loss}',
+              end='')
+
+    print(f'\nTotal loss: {total_loss}')
+
+
+def test(model, loader, device):
+    model.eval()
+    model.to(device)
+
+    targets = []
+    outputs = []
+
+    with torch.no_grad():
+        for index, (data, target) in enumerate(loader):
+            targets.append(target)
+
+            data = data.to(device)
+            output = model(data)
+            outputs.append(output)
+
+        y_pred = torch.cat(outputs, dim=0).cpu().numpy()
+        y_true = torch.cat(targets, dim=0).cpu().numpy()
+
+        print('\n' + '=' * 30)
+        print('Results')
+        print(f'Accuracy: {accuracy_score(y_true, y_pred > 0.5):.4f}')
+        print(f'AUC: {roc_auc_score(y_true, y_pred):.4f}')
+        print(f'Log loss: {log_loss(y_true, y_pred):.4f}')
 
 
 if __name__ == '__main__':
-    import pandas as pd
-    from data_transform import transform_data
+    from data_transform import CSGODataset, transform_data
 
-    rowlim = 15000
-    data = pd.read_csv('/home/gpt/Desktop/example_frames.csv', nrows=rowlim)
+    train_dataset = CSGODataset(transform=transform_data,
+                                dataset_split='train')
 
-    targets = pd.read_csv('/home/gpt/Desktop/example_rounds.csv', nrows=rowlim)
-    targets = targets[['MatchId', 'MapName', 'RoundNum', 'RoundWinnerSide']]
+    val_dataset = CSGODataset(transform=transform_data,
+                              dataset_split='val')
 
-    device = 'cpu'
+    test_dataset = CSGODataset(transform=transform_data,
+                               dataset_split='test')
 
-    mod = CNNModel().to(device)
-    # mod = FCModel().to(device)
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=64,
+                                               shuffle=True,
+                                               num_workers=0,
+                                               )
 
-    optimizer = torch.optim.Adam(mod.parameters())
-    loss_fn = torch.nn.CrossEntropyLoss()
+    val_loader = torch.utils.data.DataLoader(val_dataset,
+                                             batch_size=64,
+                                             shuffle=False,
+                                             num_workers=0,
+                                             )
+
+    test_loader = torch.utils.data.DataLoader(test_dataset,
+                                              batch_size=64,
+                                              shuffle=False,
+                                              num_workers=0,
+                                              )
+
+    device = 'cuda:0'
+
+    model = FCNN().to(device)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    loss_fn = torch.nn.BCELoss()
 
     for i in range(5):
+        print('\n' + '-' * 30)
         print(f'Training epoch {i + 1}')
-        train(model=mod,
-              data=data,
-              targets=targets,
+        train(model=model,
+              loader=train_loader,
               optimizer=optimizer,
               loss_fn=loss_fn,
               device=device,
               )
+
+        test(model=model,
+             loader=val_loader,
+             device=device,
+             )
+
+    print('\n\n\n' + '=' * 30)
+    print('Test set results')
+    test(model=model,
+         loader=test_loader,
+         device=device,
+         )
