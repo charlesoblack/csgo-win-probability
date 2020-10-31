@@ -98,6 +98,7 @@ class ResNet(torch.nn.Module):
                  hidden_sizes=[200, 100, 50],
                  output_size=2,
                  batch_norm=False,
+                 dropout=False,
                  ):
         super().__init__()
 
@@ -106,6 +107,7 @@ class ResNet(torch.nn.Module):
         self.output_size = output_size
 
         self.bn_activated = batch_norm
+        self.dropout_activated = dropout
 
         hidden_sizes.insert(0, self.input_size)
         hidden_sizes.append(self.output_size)
@@ -127,6 +129,10 @@ class ResNet(torch.nn.Module):
             if self.bn_activated:
                 norm = torch.nn.BatchNorm1d(num_features=output_size)
                 self.blocks.append(norm)
+
+            if self.dropout_activated:
+                dropout_block = torch.nn.Dropout()
+                self.blocks.append(dropout_block)
 
         # softmax
         self.softmax = torch.nn.Softmax(dim=-1)
@@ -152,6 +158,7 @@ class CNN(torch.nn.Module):
                  activation='ReLU',
                  activation_params={},
                  batch_norm=False,
+                 dropout=False,
                  ):
         super().__init__()
 
@@ -160,6 +167,7 @@ class CNN(torch.nn.Module):
         self.output_size = output_size
 
         self.bn_activated = batch_norm
+        self.dropout_activated = dropout
 
         self.conv_blocks = []
 
@@ -176,6 +184,10 @@ class CNN(torch.nn.Module):
                 self.conv_blocks.append(self.norm_conv)
             else:
                 self.norm_conv = torch.nn.Identity()
+
+            if self.dropout_activated:
+                dropout_block = torch.nn.Dropout2d()
+                self.conv_blocks.append(dropout_block)
 
             # conv
             block_output_size = ((block_output_size[0]
@@ -239,6 +251,7 @@ class FCNN(torch.nn.Module):
                  hidden_sizes=[200, 100, 50],
                  output_size=2,
                  batch_norm=False,
+                 dropout=False,
                  ):
         super().__init__()
 
@@ -247,6 +260,7 @@ class FCNN(torch.nn.Module):
         self.output_size = output_size
 
         self.bn_activated = batch_norm
+        self.dropout_activated = dropout
 
         hidden_sizes.insert(0, self.input_size)
         hidden_sizes.append(self.output_size)
@@ -263,6 +277,10 @@ class FCNN(torch.nn.Module):
             if self.bn_activated:
                 norm = torch.nn.BatchNorm1d(num_features=output_size)
                 self.linear_blocks.append(norm)
+
+            if self.dropout_activated:
+                dropout_block = torch.nn.Dropout()
+                self.linear_blocks.append(dropout_block)
 
         # softmax
         self.softmax = torch.nn.Softmax(dim=-1)
@@ -287,7 +305,7 @@ if __name__ == '__main__':
 
     print('Testing FCNN')
 
-    mod = FCNN(batch_norm=True)
+    mod = FCNN(dropout=True)
 
     res = mod(t).detach()
 
@@ -296,7 +314,7 @@ if __name__ == '__main__':
 
     print('\nTesting CNN')
 
-    mod = CNN(batch_norm=True)
+    mod = CNN(dropout=True)
 
     res = mod(t).detach()
 
@@ -305,7 +323,7 @@ if __name__ == '__main__':
 
     print('\nTesting ResNet')
 
-    mod = ResNet(batch_norm=True)
+    mod = ResNet(dropout=True)
 
     res = mod(t).detach()
 
