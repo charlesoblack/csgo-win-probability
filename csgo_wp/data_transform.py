@@ -247,7 +247,7 @@ class CSGODataset(torch.utils.data.Dataset):
                                  for _ in range(transformed.shape[0])])
 
         self.data = torch.stack(self.data)
-        self.targets = torch.Tensor(self.targets).long()
+        self.targets = torch.Tensor(self.targets)
 
         print('\nDone!')
 
