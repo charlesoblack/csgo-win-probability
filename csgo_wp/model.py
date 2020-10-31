@@ -89,78 +89,75 @@ class ConvBlock(torch.nn.Module):
         return x
 
 
-class CNNModel(torch.nn.Module):
+class CNN(torch.nn.Module):
 
     def __init__(self,
-                 batch_norm=True,
+                 input_size=(12, 10),
+                 output_size=2,
+                 options=((1, 1, 3, 1, 0, 2, 1, 0),),
                  activation='ReLU',
                  activation_params={},
                  ):
         super().__init__()
 
-        # pure unadultered genius
-        self.activation = torch.nn.__dict__[activation](**activation_params)
+        # dynamic linear stuff
+        self.input_size = input_size
+        self.output_size = output_size
 
-        self.bn_activated = batch_norm
+        self.conv_blocks = []
 
-        # first convolution section
-        self.conv_1 = torch.nn.Conv2d(in_channels=1,
-                                      out_channels=1,
-                                      kernel_size=3,
-                                      stride=1,
-                                      padding=0,
-                                      )
-        self.maxpool_1 = torch.nn.MaxPool2d(kernel_size=2,
-                                            stride=1,
-                                            padding=0,
-                                            )
+        block_output_size = input_size
 
-        # second convolution section
-        self.conv_2 = torch.nn.Conv2d(in_channels=1,
-                                      out_channels=1,
-                                      kernel_size=3,
-                                      stride=1,
-                                      padding=0,
-                                      )
-        self.maxpool_2 = torch.nn.MaxPool2d(kernel_size=2,
-                                            stride=1,
-                                            padding=0,
-                                            )
+        for option_set in options:
+            block = ConvBlock(*option_set,
+                              activation,
+                              activation_params)
+            self.conv_blocks.append(block)
 
-        if self.bn_activated:
-            self.norm_conv = torch.nn.BatchNorm2d(num_features=1)
-        else:
-            self.norm_conv = torch.nn.Identity()
+            # conv
+            block_output_size = ((block_output_size[0]
+                                  + 2 * option_set[4]
+                                  - option_set[2]) // option_set[3] + 1,
+                                 (block_output_size[1]
+                                  + 2 * option_set[4]
+                                  - option_set[2]) // option_set[3] + 1,
+                                 )
+
+            # pooling
+            block_output_size = ((block_output_size[0]
+                                  + 2 * option_set[7]
+                                  - option_set[5]) // option_set[6] + 1,
+                                 (block_output_size[1]
+                                  + 2 * option_set[7]
+                                  - option_set[5]) // option_set[6] + 1,
+                                 )
+
+            n_channels = option_set[1]
+
+        self.num_elements_output = int(block_output_size[0]
+                                       * block_output_size[1]
+                                       * n_channels)
 
         # linear section
-        self.linear = torch.nn.Linear(in_features=24, out_features=2)
-
-        if self.bn_activated:
-            self.norm_linear = torch.nn.BatchNorm1d(num_features=1)
-        else:
-            self.norm_linear = torch.nn.Identity()
+        self.linear = LinearBlock(self.num_elements_output,
+                                  self.output_size,
+                                  activation,
+                                  activation_params)
 
         # softmax
         self.softmax = torch.nn.Softmax(dim=-1)
 
     def forward(self, x):
-        x = self.conv_1(x)
-        x = self.activation(x)
-        x = self.maxpool_1(x)
 
-        x = self.conv_2(x)
-        x = self.activation(x)
-        x = self.norm_conv(x)
-        x = self.maxpool_2(x)
-        x = x.reshape(-1, 1, 24)
+        x = x.unsqueeze(1)
+
+        for block in self.conv_blocks:
+            x = block(x)
+
+        x = x.reshape(-1, self.num_elements_output)
 
         x = self.linear(x)
-        x = self.activation(x)
-        x = self.norm_linear(x)
-
         x = self.softmax(x)
-
-        x = x.squeeze(1)
 
         return x
 
@@ -213,9 +210,20 @@ if __name__ == '__main__':
     # (n_samples, 12, 10)
     t = torch.rand(size=(5, 12, 10))
 
+    print('Testing FCNN')
+
     mod = FCNN()
 
-    res = mod(t)
+    res = mod(t).detach()
+
+    print(res.shape)
+    print(res)
+
+    print('\nTesting CNN')
+
+    mod = CNN()
+
+    res = mod(t).detach()
 
     print(res.shape)
     print(res)
