@@ -89,6 +89,53 @@ class ConvBlock(torch.nn.Module):
         return x
 
 
+class ResNet(torch.nn.Module):
+
+    def __init__(self,
+                 input_size=120,
+                 activation='ReLU',
+                 activation_params={},
+                 hidden_sizes=[200, 100, 50],
+                 output_size=2,
+                 ):
+        super().__init__()
+
+        # dynamic linear stuff
+        self.input_size = input_size
+        self.output_size = output_size
+
+        hidden_sizes.insert(0, self.input_size)
+        hidden_sizes.append(self.output_size)
+
+        self.blocks = []
+
+        for input_size, output_size in pairwise(hidden_sizes):
+            block = ResidualBlock(input_size,
+                                  activation,
+                                  activation_params)
+            self.blocks.append(block)
+
+            block = LinearBlock(input_size,
+                                output_size,
+                                activation,
+                                activation_params)
+            self.blocks.append(block)
+
+        # softmax
+        self.softmax = torch.nn.Softmax(dim=-1)
+
+    def forward(self, x):
+        # flatten but keep batch size
+        x = x.flatten(start_dim=1)
+
+        for block in self.blocks:
+            x = block(x)
+
+        x = self.softmax(x)
+
+        return x
+
+
 class CNN(torch.nn.Module):
 
     def __init__(self,
@@ -222,6 +269,15 @@ if __name__ == '__main__':
     print('\nTesting CNN')
 
     mod = CNN()
+
+    res = mod(t).detach()
+
+    print(res.shape)
+    print(res)
+
+    print('\nTesting ResNet')
+
+    mod = ResNet()
 
     res = mod(t).detach()
 
