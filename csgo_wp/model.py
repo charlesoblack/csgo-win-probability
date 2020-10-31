@@ -3,6 +3,31 @@
 import torch
 
 
+class ResidualBlock(torch.nn.Module):
+
+    def __init__(self, size, activation='ReLU', activation_params={}):
+        super().__init__()
+
+        self.input_size = size
+        self.output_size = size
+
+        self.activation = torch.nn.__dict__[activation](**activation_params)
+        self.fc1 = torch.nn.Linear(self.input_size, self.output_size)
+        self.fc2 = torch.nn.Linear(self.input_size, self.output_size)
+
+    def forward(self, x):
+        y = self.fc1(x)
+        y = self.activation(y)
+
+        y = self.fc2(y)
+        y = self.activation(y)
+
+        # the "residual" part
+        y += x
+
+        return y
+
+
 class CNNModel(torch.nn.Module):
 
     def __init__(self,
