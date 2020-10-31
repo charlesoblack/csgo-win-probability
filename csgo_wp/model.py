@@ -47,6 +47,47 @@ class LinearBlock(torch.nn.Module):
         return x
 
 
+class ConvBlock(torch.nn.Module):
+
+    def __init__(self,
+                 input_size, output_size,
+                 kernel_size, stride, padding,
+                 maxpool_kernel_size, maxpool_stride, maxpool_padding,
+                 activation='ReLU', activation_params={}):
+        super().__init__()
+
+        self.input_size = input_size
+        self.output_size = output_size
+
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+
+        self.maxpool_kernel_size = maxpool_kernel_size
+        self.maxpool_stride = maxpool_stride
+        self.maxpool_padding = maxpool_padding
+
+        self.activation = torch.nn.__dict__[activation](**activation_params)
+
+        self.conv = torch.nn.Conv2d(in_channels=self.input_size,
+                                    out_channels=self.output_size,
+                                    kernel_size=self.kernel_size,
+                                    stride=self.stride,
+                                    padding=self.padding,
+                                    )
+        self.maxpool = torch.nn.MaxPool2d(kernel_size=self.maxpool_kernel_size,
+                                          stride=self.maxpool_stride,
+                                          padding=self.maxpool_padding,
+                                          )
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.maxpool(x)
+        x = self.activation(x)
+
+        return x
+
+
 class CNNModel(torch.nn.Module):
 
     def __init__(self,
