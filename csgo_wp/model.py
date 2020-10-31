@@ -96,7 +96,7 @@ class ResNet(torch.nn.Module):
                  activation='ReLU',
                  activation_params={},
                  hidden_sizes=[200, 100, 50],
-                 output_size=2,
+                 output_size=1,
                  batch_norm=False,
                  dropout=False,
                  ):
@@ -134,8 +134,8 @@ class ResNet(torch.nn.Module):
                 dropout_block = torch.nn.Dropout()
                 self.blocks.append(dropout_block)
 
-        # softmax
-        self.softmax = torch.nn.Softmax(dim=-1)
+        # sigmoid
+        self.sigmoid = torch.nn.Sigmoid()
 
     def forward(self, x):
         # flatten but keep batch size
@@ -144,16 +144,16 @@ class ResNet(torch.nn.Module):
         for block in self.blocks:
             x = block(x)
 
-        x = self.softmax(x)
+        x = self.sigmoid(x)
 
-        return x
+        return x.squeeze(1)
 
 
 class CNN(torch.nn.Module):
 
     def __init__(self,
                  input_size=(12, 10),
-                 output_size=2,
+                 output_size=1,
                  options=((1, 1, 3, 1, 0, 2, 1, 0),),
                  activation='ReLU',
                  activation_params={},
@@ -223,8 +223,8 @@ class CNN(torch.nn.Module):
             self.norm = torch.nn.BatchNorm1d(num_features=self.output_size)
         else:
             self.norm = torch.nn.Identity()
-        # softmax
-        self.softmax = torch.nn.Softmax(dim=-1)
+        # sigmoid
+        self.sigmoid = torch.nn.Sigmoid()
 
     def forward(self, x):
 
@@ -237,9 +237,9 @@ class CNN(torch.nn.Module):
 
         x = self.linear(x)
         x = self.norm(x)
-        x = self.softmax(x)
+        x = self.sigmoid(x)
 
-        return x
+        return x.squeeze(1)
 
 
 class FCNN(torch.nn.Module):
@@ -249,7 +249,7 @@ class FCNN(torch.nn.Module):
                  activation='ReLU',
                  activation_params={},
                  hidden_sizes=[200, 100, 50],
-                 output_size=2,
+                 output_size=1,
                  batch_norm=False,
                  dropout=False,
                  ):
@@ -282,8 +282,8 @@ class FCNN(torch.nn.Module):
                 dropout_block = torch.nn.Dropout()
                 self.linear_blocks.append(dropout_block)
 
-        # softmax
-        self.softmax = torch.nn.Softmax(dim=-1)
+        # sigmoid to get win probability
+        self.sigmoid = torch.nn.Sigmoid()
 
     def forward(self, x):
         # flatten but keep batch size
@@ -292,9 +292,9 @@ class FCNN(torch.nn.Module):
         for block in self.linear_blocks:
             x = block(x)
 
-        x = self.softmax(x)
+        x = self.sigmoid(x)
 
-        return x
+        return x.squeeze(1)
 
 
 if __name__ == '__main__':
