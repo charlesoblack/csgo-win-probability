@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import torch
+from more_itertools import pairwise
 
 
 class ResidualBlock(torch.nn.Module):
@@ -164,44 +165,32 @@ class CNNModel(torch.nn.Module):
         return x
 
 
-class FCModel(torch.nn.Module):
+class FCNN(torch.nn.Module):
 
     def __init__(self,
-                 batch_norm=True,
+                 input_size=120,
                  activation='ReLU',
                  activation_params={},
-                 hidden_size_1=200,
-                 hidden_size_2=100,
-                 hidden_size_3=50,
+                 hidden_sizes=[200, 100, 50],
+                 output_size=2,
                  ):
         super().__init__()
 
-        self.activation = torch.nn.__dict__[activation](**activation_params)
+        # dynamic linear stuff
+        self.input_size = input_size
+        self.output_size = output_size
 
-        self.bn_activated = batch_norm
+        hidden_sizes.insert(0, self.input_size)
+        hidden_sizes.append(self.output_size)
 
-        # linear stuff
-        self.input_size = 120
-        self.hidden_size_1 = hidden_size_1
-        self.hidden_size_2 = hidden_size_2
-        self.hidden_size_3 = hidden_size_3
+        self.linear_blocks = []
 
-        self.linear_1 = torch.nn.Linear(in_features=self.input_size,
-                                        out_features=self.hidden_size_1)
-
-        self.linear_2 = torch.nn.Linear(in_features=self.hidden_size_1,
-                                        out_features=self.hidden_size_2)
-
-        self.linear_3 = torch.nn.Linear(in_features=self.hidden_size_2,
-                                        out_features=self.hidden_size_3)
-
-        self.linear_4 = torch.nn.Linear(in_features=self.hidden_size_3,
-                                        out_features=2)
-
-        if self.bn_activated:
-            self.norm = torch.nn.BatchNorm1d(num_features=1)
-        else:
-            self.norm = torch.nn.Identity()
+        for input_size, output_size in pairwise(hidden_sizes):
+            block = LinearBlock(input_size,
+                                output_size,
+                                activation,
+                                activation_params)
+            self.linear_blocks.append(block)
 
         # softmax
         self.softmax = torch.nn.Softmax(dim=-1)
@@ -209,23 +198,9 @@ class FCModel(torch.nn.Module):
     def forward(self, x):
         # flatten but keep batch size
         x = x.flatten(start_dim=1)
-        x = x.unsqueeze(1)
 
-        x = self.linear_1(x)
-        x = self.activation(x)
-        x = self.norm(x)
-
-        x = self.linear_2(x)
-        x = self.activation(x)
-        x = self.norm(x)
-
-        x = self.linear_3(x)
-        x = self.activation(x)
-        x = self.norm(x)
-
-        x = self.linear_4(x)
-        x = self.activation(x)
-        x = self.norm(x)
+        for block in self.linear_blocks:
+            x = block(x)
 
         x = self.softmax(x)
 
@@ -233,17 +208,14 @@ class FCModel(torch.nn.Module):
 
 
 if __name__ == '__main__':
-    import pandas as pd
-    from data_transform import transform_data
 
-    # t = torch.rand(size=(5, 1, 10, 12))
-    data = pd.read_csv('/home/gpt/Desktop/example_frames.csv', nrows=100)
-    t = transform_data(data, 'de_inferno')
+    # dummy data for testing
+    # (n_samples, 12, 10)
+    t = torch.rand(size=(5, 12, 10))
 
-    mod = CNNModel()
+    mod = FCNN()
 
-    print(mod(t))
+    res = mod(t)
 
-    mod = FCModel()
-
-    print(mod(t))
+    print(res.shape)
+    print(res)
