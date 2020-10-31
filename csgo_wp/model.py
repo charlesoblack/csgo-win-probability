@@ -112,7 +112,7 @@ class ResNet(torch.nn.Module):
         hidden_sizes.insert(0, self.input_size)
         hidden_sizes.append(self.output_size)
 
-        self.blocks = []
+        self.blocks = torch.nn.ModuleList()
 
         for input_size, output_size in pairwise(hidden_sizes):
             block = ResidualBlock(input_size,
@@ -169,7 +169,7 @@ class CNN(torch.nn.Module):
         self.bn_activated = batch_norm
         self.dropout_activated = dropout
 
-        self.conv_blocks = []
+        self.conv_blocks = torch.nn.ModuleList()
 
         block_output_size = input_size
 
@@ -265,7 +265,7 @@ class FCNN(torch.nn.Module):
         hidden_sizes.insert(0, self.input_size)
         hidden_sizes.append(self.output_size)
 
-        self.linear_blocks = []
+        self.linear_blocks = torch.nn.ModuleList()
 
         for input_size, output_size in pairwise(hidden_sizes):
             block = LinearBlock(input_size,
