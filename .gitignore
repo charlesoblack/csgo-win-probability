@@ -8,6 +8,7 @@ __pycache__/
 data/
 *.sublime-project
 *.sublime-workspace
+*.pt
 
 # C extensions
 *.so
