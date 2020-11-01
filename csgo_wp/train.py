@@ -115,20 +115,6 @@ if __name__ == '__main__':
     import random
     warnings.filterwarnings('ignore')
 
-    train_dataset = CSGODataset(transform=transform_data,
-                                dataset_split='train')
-
-    val_dataset = CSGODataset(transform=transform_data,
-                              dataset_split='val')
-
-    test_dataset = CSGODataset(transform=transform_data,
-                               dataset_split='test')
-
-    if len(sys.argv) < 2:
-        test_train_functions(train_dataset, val_dataset, test_dataset)
-        sys.exit()
-
-    # implicit else
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--n-epochs',
@@ -208,6 +194,20 @@ if __name__ == '__main__':
         print('Invalid learning rate passed in: must be positive')
         sys.exit(1)
 
+    train_dataset = CSGODataset(transform=transform_data,
+                                dataset_split='train')
+
+    val_dataset = CSGODataset(transform=transform_data,
+                              dataset_split='val')
+
+    test_dataset = CSGODataset(transform=transform_data,
+                               dataset_split='test')
+
+    if len(sys.argv) < 2:
+        test_train_functions(train_dataset, val_dataset, test_dataset)
+        sys.exit()
+
+    # implicit else
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=args.batch_size,
                                                shuffle=True,
