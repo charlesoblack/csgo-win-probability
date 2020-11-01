@@ -99,6 +99,7 @@ class ResNet(torch.nn.Module):
                  output_size=1,
                  batch_norm=False,
                  dropout=False,
+                 cnn_options=tuple(),
                  ):
         super().__init__()
 
@@ -154,11 +155,12 @@ class CNN(torch.nn.Module):
     def __init__(self,
                  input_size=(12, 10),
                  output_size=1,
-                 options=((1, 1, 3, 1, 0, 2, 1, 0),),
+                 cnn_options=((1, 1, 3, 1, 0, 2, 1, 0),),
                  activation='ReLU',
                  activation_params={},
                  batch_norm=False,
                  dropout=False,
+                 hidden_sizes=[],
                  ):
         super().__init__()
 
@@ -173,7 +175,7 @@ class CNN(torch.nn.Module):
 
         block_output_size = input_size
 
-        for option_set in options:
+        for option_set in cnn_options:
             block = ConvBlock(*option_set,
                               activation,
                               activation_params)
@@ -252,6 +254,7 @@ class FCNN(torch.nn.Module):
                  output_size=1,
                  batch_norm=False,
                  dropout=False,
+                 cnn_options=tuple(),
                  ):
         super().__init__()
 
