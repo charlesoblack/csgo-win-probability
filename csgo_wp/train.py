@@ -51,25 +51,14 @@ def test(model, loader, device):
         y_pred = torch.cat(outputs, dim=0).cpu().numpy()
         y_true = torch.cat(targets, dim=0).cpu().numpy()
 
-        print('\n' + '=' * 30)
+        print('\n' + '-' * 30)
         print('Results')
         print(f'Accuracy: {accuracy_score(y_true, y_pred > 0.5):.4f}')
         print(f'AUC: {roc_auc_score(y_true, y_pred):.4f}')
         print(f'Log loss: {log_loss(y_true, y_pred):.4f}')
 
 
-if __name__ == '__main__':
-    from data_transform import CSGODataset, transform_data
-
-    train_dataset = CSGODataset(transform=transform_data,
-                                dataset_split='train')
-
-    val_dataset = CSGODataset(transform=transform_data,
-                              dataset_split='val')
-
-    test_dataset = CSGODataset(transform=transform_data,
-                               dataset_split='test')
-
+def test_train_functions(train_dataset, val_dataset, test_dataset):
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=64,
                                                shuffle=True,
@@ -96,7 +85,7 @@ if __name__ == '__main__':
     loss_fn = torch.nn.BCELoss()
 
     for i in range(5):
-        print('\n' + '-' * 30)
+        print('\n' + '=' * 30)
         print(f'Training epoch {i + 1}')
         train(model=model,
               loader=train_loader,
@@ -110,9 +99,171 @@ if __name__ == '__main__':
              device=device,
              )
 
-    print('\n\n\n' + '=' * 30)
+    print('\n\n\n' + '+' * 30)
     print('Test set results')
     test(model=model,
          loader=test_loader,
          device=device,
          )
+
+
+if __name__ == '__main__':
+    from data_transform import CSGODataset, transform_data
+    import sys
+    import argparse
+    import warnings
+    import random
+    warnings.filterwarnings('ignore')
+
+    train_dataset = CSGODataset(transform=transform_data,
+                                dataset_split='train')
+
+    val_dataset = CSGODataset(transform=transform_data,
+                              dataset_split='val')
+
+    test_dataset = CSGODataset(transform=transform_data,
+                               dataset_split='test')
+
+    if len(sys.argv) < 2:
+        test_train_functions(train_dataset, val_dataset, test_dataset)
+        sys.exit()
+
+    # implicit else
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--n-epochs',
+                        type=int,
+                        default=10,
+                        )
+
+    parser.add_argument('--batch-size',
+                        type=int,
+                        default=32,
+                        )
+
+    parser.add_argument('--model-type',
+                        type=str,
+                        default='fc',
+                        )
+
+    parser.add_argument('--hidden-sizes',
+                        type=list,
+                        default=[200, 100, 50],
+                        )
+
+    parser.add_argument('--cnn-options',
+                        type=tuple,
+                        default=((1, 1, 3, 1, 0, 2, 1, 0),),
+                        )
+
+    parser.add_argument('--dropout',
+                        type=bool,
+                        default=False,
+                        )
+
+    parser.add_argument('--batch-norm',
+                        type=bool,
+                        default=False,
+                        )
+
+    parser.add_argument('--learning-rate',
+                        type=float,
+                        default=0.0001,
+                        )
+
+    parser.add_argument('--activation',
+                        type=str,
+                        default='ReLU',
+                        )
+
+    parser.add_argument('--activation-params',
+                        type=dict,
+                        default={},
+                        )
+
+    args = parser.parse_args()
+
+    if args.model_type not in ['fc', 'cnn', 'res']:
+        print('Model type not supported, only one of'
+              ' "fc", "cnn", "res" allowed')
+        sys.exit(1)
+
+    if not all([len(x) == 8 for x in args.cnn_options]):
+        print('Invalid CNN options passed in: was missing argument')
+        sys.exit(1)
+
+    if args.activation not in torch.nn.__dict__.keys():
+        print('Invalid activation passed in: does not exist')
+        sys.exit(1)
+
+    if args.n_epochs < 1:
+        print('Invalid number of epochs passed in: must be greater than 1')
+        sys.exit(1)
+
+    if args.batch_size < 1:
+        print('Invalid batch size passed in: must be greater than 1')
+        sys.exit(1)
+
+    if args.learning_rate < 0:
+        print('Invalid learning rate passed in: must be positive')
+        sys.exit(1)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=args.batch_size,
+                                               shuffle=True,
+                                               num_workers=0,
+                                               )
+
+    val_loader = torch.utils.data.DataLoader(val_dataset,
+                                             batch_size=args.batch_size,
+                                             shuffle=False,
+                                             num_workers=0,
+                                             )
+
+    test_loader = torch.utils.data.DataLoader(test_dataset,
+                                              batch_size=args.batch_size,
+                                              shuffle=False,
+                                              num_workers=0,
+                                              )
+
+    models = {'fc': FCNN, 'cnn': CNN, 'res': ResNet}
+
+    model = models[args.model_type](hidden_sizes=args.hidden_sizes,
+                                    activation=args.activation,
+                                    activation_params=args.activation_params,
+                                    dropout=args.dropout,
+                                    batch_norm=args.batch_norm,
+                                    cnn_options=args.cnn_options,
+                                    )
+
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
+    model = model.to(device)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+    loss_fn = torch.nn.BCELoss()
+
+    for i in range(args.n_epochs):
+        print('\n' + '=' * 30)
+        print(f'Training epoch {i + 1}')
+        train(model=model,
+              loader=train_loader,
+              optimizer=optimizer,
+              loss_fn=loss_fn,
+              device=device,
+              )
+
+        test(model=model,
+             loader=val_loader,
+             device=device,
+             )
+
+    print('\n\n\n' + '+' * 30)
+    print(f'Test set results for: {args}\n\n')
+
+    test(model=model,
+         loader=test_loader,
+         device=device,
+         )
+
+    torch.save(model.state_dict(), f'model-{random.random():.5f}.pt')
