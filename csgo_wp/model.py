@@ -116,6 +116,9 @@ class ResNet(torch.nn.Module):
         self.blocks = torch.nn.ModuleList()
 
         for input_size, output_size in pairwise(hidden_sizes):
+            # last unit: don't use activation
+            if output_size == self.output_size:
+                activation = 'Identity'
             block = ResidualBlock(input_size,
                                   activation,
                                   activation_params)
@@ -221,10 +224,6 @@ class CNN(torch.nn.Module):
                                   activation,
                                   activation_params)
 
-        if self.bn_activated:
-            self.norm = torch.nn.BatchNorm1d(num_features=self.output_size)
-        else:
-            self.norm = torch.nn.Identity()
         # sigmoid
         self.sigmoid = torch.nn.Sigmoid()
 
@@ -238,7 +237,6 @@ class CNN(torch.nn.Module):
         x = x.reshape(-1, self.num_elements_output)
 
         x = self.linear(x)
-        x = self.norm(x)
         x = self.sigmoid(x)
 
         return x.squeeze(1)
@@ -271,17 +269,20 @@ class FCNN(torch.nn.Module):
         self.linear_blocks = torch.nn.ModuleList()
 
         for input_size, output_size in pairwise(hidden_sizes):
+            # last unit: don't use activation
+            if output_size == self.output_size:
+                activation = 'Identity'
             block = LinearBlock(input_size,
                                 output_size,
                                 activation,
                                 activation_params)
             self.linear_blocks.append(block)
 
-            if self.bn_activated:
+            if self.bn_activated and output_size != self.output_size:
                 norm = torch.nn.BatchNorm1d(num_features=output_size)
                 self.linear_blocks.append(norm)
 
-            if self.dropout_activated:
+            if self.dropout_activated and output_size != self.output_size:
                 dropout_block = torch.nn.Dropout()
                 self.linear_blocks.append(dropout_block)
 
