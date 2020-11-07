@@ -86,6 +86,95 @@ def transform_data(df, game_map):
     return result
 
 
+def transform_multichannel(df, game_map):
+    df.drop_duplicates(inplace=True)
+
+    for c in ['X', 'Y', 'Z']:
+        df[c] = df[c].astype(float)
+
+    df['AreaId'] = df['AreaId'].astype(int)
+    df['IsAlive'] = df['IsAlive'].astype(bool)
+
+    df = df[['Side',
+             'IsAlive',
+             'PlayerSteamId',
+             'X',
+             'Y',
+             'Z',
+             'Tick',
+             'AreaId',
+             ]]
+    # TODO: fix SettingWithCopy warning
+    df['pos'] = df[['X', 'Y', 'Z']].values.tolist()
+
+    merged = df.merge(df, on='Tick')
+    merged['pos_diff'] = merged[['pos_x', 'pos_y']].values.tolist()
+    merged['area_diff'] = merged[['AreaId_x', 'AreaId_y']].values.tolist()
+
+    area_dist = partial(area_dist_all, game_map=game_map)
+
+    distance_matrix = merged.pivot_table(index=['Tick', 'PlayerSteamId_x'],
+                                         columns='PlayerSteamId_y',
+                                         values='area_diff',
+                                         aggfunc=area_dist,
+                                         )
+
+    t_players = np.sort(df[df['Side'] == 'T']['PlayerSteamId']
+                        .unique()
+                        ).tolist()
+    ct_players = np.sort(df[df['Side'] == 'CT']['PlayerSteamId']
+                         .unique()
+                         ).tolist()
+
+    distance_matrix.reset_index(level=1, drop=False, inplace=True)
+
+    t_rows = distance_matrix['PlayerSteamId_x'].isin(t_players)
+    ct_rows = distance_matrix['PlayerSteamId_x'].isin(ct_players)
+
+    # all 4 combinations
+    channel_1 = torch.Tensor(distance_matrix[t_rows][t_players].values)
+    channel_2 = torch.Tensor(distance_matrix[ct_rows][ct_players].values)
+    channel_3 = torch.Tensor(distance_matrix[t_rows][ct_players].values)
+    channel_4 = torch.Tensor(distance_matrix[ct_rows][t_players].values)
+
+    # (batch_size, 4, 5, 5)
+    t = torch.stack([channel_1.view(-1, 5, 5),
+                     channel_2.view(-1, 5, 5),
+                     channel_3.view(-1, 5, 5),
+                     channel_4.view(-1, 5, 5),
+                     ],
+                    dim=1)
+
+    additional_data_t = (df[df['Side'] == 'T']
+                         .groupby(['Tick', 'PlayerSteamId'], as_index=False)
+                         .agg({'IsAlive': 'any',  # how about returning hp?
+                               })
+                         .astype(int)
+                         .sort_values(by=['Tick', 'PlayerSteamId'])
+                         )
+
+    additional_data_ct = (df[df['Side'] == 'CT']
+                          .groupby(['Tick', 'PlayerSteamId'], as_index=False)
+                          .agg({'IsAlive': 'any',
+                                })
+                          .astype(int)
+                          .sort_values(by=['Tick', 'PlayerSteamId'])
+                          )
+
+    # (batch_size, 1, 5, 5)
+    t_2 = (torch.stack([torch.diag(torch.Tensor(x['IsAlive'].values))
+                        for idx, x in additional_data_t.groupby(['Tick'])])
+                .view(-1, 1, 5, 5))
+    t_3 = (torch.stack([torch.diag(torch.Tensor(x['IsAlive'].values))
+                        for idx, x in additional_data_ct.groupby(['Tick'])])
+                .view(-1, 1, 5, 5))
+
+    result = torch.cat([t, t_2, t_3],
+                       dim=1).view(-1, 6, 5, 5)
+
+    return result
+
+
 class CSGODataset(torch.utils.data.Dataset):
 
     def __init__(self,
