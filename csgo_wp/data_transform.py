@@ -277,15 +277,18 @@ class CSGODataset(torch.utils.data.Dataset):
 
                 for round_num in subset['RoundNum'].unique():
                     game_round = subset[subset['RoundNum'] == round_num]
-                    player_count = game_round['PlayerSteamId'].nunique()
+                    player_counts = (game_round.groupby('Side')
+                                               .agg({'PlayerSteamId': 'nunique'
+                                                     })
+                                     )
                     tick_count = game_round['Tick'].nunique()
-                    tick_x_players = player_count * tick_count
+                    tick_x_players = player_counts.sum().item() * tick_count
 
-                    if (player_count < 10
+                    if ((player_counts != 5).any()
                        or game_round.shape[0] != tick_x_players):
-                        # if we have less than 10 players, ignore this df
-                        # hopefully this doesn't affect the train/test split
-                        # ratio too much
+                        # if we have more/less than 5 players per side,
+                        # ignore this df. hopefully this doesn't affect the
+                        # train/test split ratio too much
                         bad_round_count += 1
                         # drop the rows with the bogus round
                         continue
