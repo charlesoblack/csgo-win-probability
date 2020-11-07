@@ -110,6 +110,7 @@ def test_train_functions(train_dataset, val_dataset, test_dataset):
 
 if __name__ == '__main__':
     from data_transform import CSGODataset, transform_data
+    from data_transform import transform_multichannel
     import sys
     import argparse
     import warnings
@@ -175,6 +176,11 @@ if __name__ == '__main__':
                         default=False,
                         )
 
+    parser.add_argument('--transform',
+                        type=str,
+                        default='unsorted',
+                        )
+
     args = parser.parse_args()
 
     if args.model_type not in ['fc', 'cnn', 'res']:
@@ -202,17 +208,27 @@ if __name__ == '__main__':
         print('Invalid learning rate passed in: must be positive')
         sys.exit(1)
 
-    train_dataset = CSGODataset(transform=transform_data,
+    if args.transform not in ['unsorted', 'channels']:
+        print('Invalid transform passed')
+        sys.exit(1)
+
+    transforms = {'unsorted': transform_data,
+                  'channels': transform_multichannel,
+                  }
+
+    transform = transforms[args.transform]
+
+    train_dataset = CSGODataset(transform=transform,
                                 dataset_split='train',
                                 verbose=args.verbose,
                                 )
 
-    val_dataset = CSGODataset(transform=transform_data,
+    val_dataset = CSGODataset(transform=transform,
                               dataset_split='val',
                               verbose=args.verbose,
                               )
 
-    test_dataset = CSGODataset(transform=transform_data,
+    test_dataset = CSGODataset(transform=transform,
                                dataset_split='test',
                                verbose=args.verbose,
                                )
