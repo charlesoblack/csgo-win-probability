@@ -199,10 +199,6 @@ class CSGODataset(torch.utils.data.Dataset):
 
             self.file_loc = folder + 'csgo_playerframes_dust2.csv'
 
-            os.makedirs(folder + 'train')
-            os.makedirs(folder + 'val')
-            os.makedirs(folder + 'test')
-
             print('Loading entire dataframe into memory...')
 
             frames_columns = ['MatchId',
@@ -296,6 +292,10 @@ class CSGODataset(torch.utils.data.Dataset):
                     splits[split].append(game_round)
 
             print(f'Found {bad_round_count} rounds with fewer than 10 players')
+
+            os.makedirs(folder + 'train')
+            os.makedirs(folder + 'val')
+            os.makedirs(folder + 'test')
 
             for k, v in splits.items():
                 with open(folder + k + f'/{k}.pckl', 'wb') as f:
