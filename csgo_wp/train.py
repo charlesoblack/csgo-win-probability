@@ -217,7 +217,7 @@ if __name__ == '__main__':
                   }
 
     input_sizes = {'unsorted': (1, 12, 10),
-                   'channels': (3, 5, 5),
+                   'channels': (6, 5, 5),
                    }
 
     transform = transforms[args.transform]
