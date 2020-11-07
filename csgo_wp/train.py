@@ -268,4 +268,8 @@ if __name__ == '__main__':
          device=device,
          )
 
-    torch.save(model.state_dict(), f'model-{random.random():.5f}.pt')
+    random_number = random.random()
+
+    torch.save(model.state_dict(), f'model-{random_number:.5f}.pt')
+
+    print(f'Saved to model-{random_number:.5f}.pt')
