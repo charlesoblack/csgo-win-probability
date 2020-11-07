@@ -280,7 +280,7 @@ class CSGODataset(torch.utils.data.Dataset):
                     tick_count = game_round['Tick'].nunique()
                     tick_x_players = player_counts.sum().item() * tick_count
 
-                    if ((player_counts != 5).any()
+                    if ((player_counts != 5).any().item()
                        or game_round.shape[0] != tick_x_players):
                         # if we have more/less than 5 players per side,
                         # ignore this df. hopefully this doesn't affect the
