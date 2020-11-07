@@ -5,7 +5,7 @@ from model import FCNN, CNN, ResNet  # noqa
 from sklearn.metrics import log_loss, roc_auc_score, accuracy_score
 
 
-def train(model, loader, optimizer, loss_fn, device):
+def train(model, loader, optimizer, loss_fn, device, verbose):
     model.train()
     model.to(device)
 
@@ -27,8 +27,9 @@ def train(model, loader, optimizer, loss_fn, device):
 
         optimizer.step()
 
-        print(f'\rBatch {index + 1}/{len(loader)}, agg loss: {total_loss}',
-              end='')
+        if verbose:
+            print(f'\rBatch {index + 1}/{len(loader)}, agg loss: {total_loss}',
+                  end='')
 
     print(f'\nTotal loss: {total_loss}')
 
@@ -169,6 +170,11 @@ if __name__ == '__main__':
                         default={},
                         )
 
+    parser.add_argument('--verbose',
+                        type=bool,
+                        default=False,
+                        )
+
     args = parser.parse_args()
 
     if args.model_type not in ['fc', 'cnn', 'res']:
@@ -197,13 +203,19 @@ if __name__ == '__main__':
         sys.exit(1)
 
     train_dataset = CSGODataset(transform=transform_data,
-                                dataset_split='train')
+                                dataset_split='train',
+                                verbose=args.verbose,
+                                )
 
     val_dataset = CSGODataset(transform=transform_data,
-                              dataset_split='val')
+                              dataset_split='val',
+                              verbose=args.verbose,
+                              )
 
     test_dataset = CSGODataset(transform=transform_data,
-                               dataset_split='test')
+                               dataset_split='test',
+                               verbose=args.verbose,
+                               )
 
     if len(sys.argv) < 2:
         test_train_functions(train_dataset, val_dataset, test_dataset)
@@ -253,6 +265,7 @@ if __name__ == '__main__':
               optimizer=optimizer,
               loss_fn=loss_fn,
               device=device,
+              verbose=args.verbose,
               )
 
         test(model=model,

@@ -92,6 +92,7 @@ class CSGODataset(torch.utils.data.Dataset):
                  folder='G:/datasets/csgo/',
                  transform=None,
                  dataset_split='train',
+                 verbose=False,
                  rng_seed=13):
         self.rng_seed = rng_seed
         torch.manual_seed(rng_seed)
@@ -234,8 +235,10 @@ class CSGODataset(torch.utils.data.Dataset):
             match_id = game_round['MatchId'].values[0]
             map_name = game_round['MapName'].values[0]
             round_num = game_round['RoundNum'].values[0]
-            print(f'\rTransforming {idx +1}/{len_data}: {match_id}, '
-                  f'{map_name}, {round_num}  ', end='')
+
+            if verbose:
+                print(f'\rTransforming {idx +1}/{len_data}: {match_id}, '
+                      f'{map_name}, {round_num}  ', end='')
             transformed = self.transform(game_round, 'de_dust2')
             self.data.extend(transformed)
 
