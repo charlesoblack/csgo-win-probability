@@ -309,40 +309,58 @@ class CSGODataset(torch.utils.data.Dataset):
                 self.raw_data = pickle.load(f)
 
         self.transform = transform
+        transform_name = self.transform.__name__
         self.data = []
         self.targets = []
 
-        self.rounds = pd.read_csv(folder + 'csgo_rounds_dust2.csv',
-                                  usecols=['MatchId',
-                                           'MapName',
-                                           'RoundNum',
-                                           'WinningSide',
-                                           ])
+        if not os.path.exists(os.path.join(folder,
+                                           'test',
+                                           f'{transform_name}.pckl')):
 
-        print('Transforming raw data...')
+            self.rounds = pd.read_csv(folder + 'csgo_rounds_dust2.csv',
+                                      usecols=['MatchId',
+                                               'MapName',
+                                               'RoundNum',
+                                               'WinningSide',
+                                               ])
 
-        len_data = len(self.raw_data)
+            print('Transforming raw data...')
 
-        for idx, game_round in enumerate(self.raw_data):
-            match_id = game_round['MatchId'].values[0]
-            map_name = game_round['MapName'].values[0]
-            round_num = game_round['RoundNum'].values[0]
+            len_data = len(self.raw_data)
 
-            if verbose:
-                print(f'\rTransforming {idx +1}/{len_data}: {match_id}, '
-                      f'{map_name}, {round_num}  ', end='')
-            transformed = self.transform(game_round, 'de_dust2')
-            self.data.extend(transformed)
+            for idx, game_round in enumerate(self.raw_data):
+                match_id = game_round['MatchId'].values[0]
+                map_name = game_round['MapName'].values[0]
+                round_num = game_round['RoundNum'].values[0]
 
-            target = self.rounds[(self.rounds['MatchId'] == match_id)
-                                 & (self.rounds['MapName'] == map_name)
-                                 & (self.rounds['RoundNum'] == round_num)]
-            target = 1 if target['WinningSide'].iloc[0] == 'CT' else 0
-            self.targets.extend([target
-                                 for _ in range(transformed.shape[0])])
+                if verbose:
+                    print(f'\rTransforming {idx +1}/{len_data}: {match_id}, '
+                          f'{map_name}, {round_num}  ', end='')
+                transformed = self.transform(game_round, 'de_dust2')
+                self.data.extend(transformed)
 
-        self.data = torch.stack(self.data)
-        self.targets = torch.Tensor(self.targets)
+                target = self.rounds[(self.rounds['MatchId'] == match_id)
+                                     & (self.rounds['MapName'] == map_name)
+                                     & (self.rounds['RoundNum'] == round_num)]
+                target = 1 if target['WinningSide'].iloc[0] == 'CT' else 0
+                self.targets.extend([target
+                                     for _ in range(transformed.shape[0])])
+
+            self.data = torch.stack(self.data)
+            self.targets = torch.Tensor(self.targets)
+
+            with open(os.path.join(folder,
+                                   self.split,
+                                   f'{transform_name}.pckl'), 'wb') as f:
+                pickle.dump((self.data, self.targets), f)
+
+        else:
+            print('Reading transformed data...')
+
+            with open(os.path.join(folder,
+                                   self.split,
+                                   f'{transform_name}.pckl'), 'rb') as f:
+                self.data, self.targets = pickle.load(f)
 
         print('\nDone!')
 
