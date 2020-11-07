@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import torch
+import numpy as np
 from more_itertools import pairwise
 
 
@@ -92,7 +93,7 @@ class ConvBlock(torch.nn.Module):
 class ResNet(torch.nn.Module):
 
     def __init__(self,
-                 input_size=120,
+                 input_size=(1, 12, 10),
                  activation='ReLU',
                  activation_params={},
                  hidden_sizes=[200, 100, 50],
@@ -104,7 +105,7 @@ class ResNet(torch.nn.Module):
         super().__init__()
 
         # dynamic linear stuff
-        self.input_size = input_size
+        self.input_size = np.prod(input_size)
         self.output_size = output_size
 
         self.bn_activated = batch_norm
@@ -156,7 +157,7 @@ class ResNet(torch.nn.Module):
 class CNN(torch.nn.Module):
 
     def __init__(self,
-                 input_size=(12, 10),
+                 input_size=(1, 12, 10),
                  output_size=1,
                  cnn_options=((1, 1, 3, 1, 0, 2, 1, 0),),
                  activation='ReLU',
@@ -176,7 +177,7 @@ class CNN(torch.nn.Module):
 
         self.conv_blocks = torch.nn.ModuleList()
 
-        block_output_size = input_size
+        block_output_size = input_size[1:]
 
         for option_set in cnn_options:
             block = ConvBlock(*option_set,
@@ -245,7 +246,7 @@ class CNN(torch.nn.Module):
 class FCNN(torch.nn.Module):
 
     def __init__(self,
-                 input_size=120,
+                 input_size=(1, 12, 10),
                  activation='ReLU',
                  activation_params={},
                  hidden_sizes=[200, 100, 50],
@@ -257,7 +258,7 @@ class FCNN(torch.nn.Module):
         super().__init__()
 
         # dynamic linear stuff
-        self.input_size = input_size
+        self.input_size = np.prod(input_size)
         self.output_size = output_size
 
         self.bn_activated = batch_norm

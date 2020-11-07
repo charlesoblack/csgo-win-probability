@@ -216,6 +216,10 @@ if __name__ == '__main__':
                   'channels': transform_multichannel,
                   }
 
+    input_sizes = {'unsorted': (1, 12, 10),
+                   'channels': (3, 5, 5),
+                   }
+
     transform = transforms[args.transform]
 
     train_dataset = CSGODataset(transform=transform,
@@ -258,7 +262,8 @@ if __name__ == '__main__':
 
     models = {'fc': FCNN, 'cnn': CNN, 'res': ResNet}
 
-    model = models[args.model_type](hidden_sizes=args.hidden_sizes,
+    model = models[args.model_type](input_size=input_sizes[args.transform],
+                                    hidden_sizes=args.hidden_sizes,
                                     activation=args.activation,
                                     activation_params=args.activation_params,
                                     dropout=args.dropout,
