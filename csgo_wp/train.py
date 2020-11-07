@@ -133,12 +133,14 @@ if __name__ == '__main__':
                         )
 
     parser.add_argument('--hidden-sizes',
-                        type=list,
+                        type=lambda s: [int(item) for item in s.split(',')],
                         default=[200, 100, 50],
                         )
 
     parser.add_argument('--cnn-options',
-                        type=tuple,
+                        type=lambda x: tuple(tuple(int(item)
+                                                   for item in s.split(','))
+                                             for s in x.split('|')),
                         default=((1, 1, 3, 1, 0, 2, 1, 0),),
                         )
 
