@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 import torch
-from model import FCNN, CNN, ResNet  # noqa
+from model import FCNN, CNN, ResNet
 from sklearn.metrics import log_loss, roc_auc_score, accuracy_score
 
 
@@ -49,8 +49,8 @@ def test(model, loader, device):
             output = model(data)
             outputs.append(output)
 
-        y_pred = torch.cat(outputs, dim=0).cpu().numpy()
-        y_true = torch.cat(targets, dim=0).cpu().numpy()
+        y_pred = torch.cat(outputs, dim=0).cpu().numpy().astype(float)
+        y_true = torch.cat(targets, dim=0).cpu().numpy().astype(float)
 
         print('\n' + '-' * 30)
         print('Results')
