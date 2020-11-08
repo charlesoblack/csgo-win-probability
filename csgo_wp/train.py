@@ -58,6 +58,8 @@ def test(model, loader, device):
         print(f'AUC: {roc_auc_score(y_true, y_pred):.4f}')
         print(f'Log loss: {log_loss(y_true, y_pred):.4f}')
 
+    return roc_auc_score(y_true, y_pred)
+
 
 def test_train_functions(train_dataset, val_dataset, test_dataset):
     train_loader = torch.utils.data.DataLoader(train_dataset,
@@ -278,6 +280,9 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     loss_fn = torch.nn.BCELoss()
 
+    # init at 0 since any auc will be greater than 0
+    old_auc = 0
+
     for i in range(args.n_epochs):
         print('\n' + '=' * 30)
         print(f'Training epoch {i + 1}')
@@ -289,10 +294,18 @@ if __name__ == '__main__':
               verbose=args.verbose,
               )
 
-        test(model=model,
-             loader=val_loader,
-             device=device,
-             )
+        auc = test(model=model,
+                   loader=val_loader,
+                   device=device,
+                   )
+
+        if old_auc > auc:
+            print(f'Early stopping at epoch {i}: old AUC {old_auc:.4f}, '
+                  f'new AUC {auc:.4f}.')
+            break
+
+        # implicit else
+        old_auc = auc
 
     print('\n\n\n' + '+' * 30)
     print(f'Test set results for: {args}\n\n')
