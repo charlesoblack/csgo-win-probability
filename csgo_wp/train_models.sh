@@ -1,7 +1,7 @@
 python train.py --n-epochs 10 >> training_log.log 2>&1
 python train.py --n-epochs 10 --learning-rate 0.00001 >> training_log.log 2>&1
 python train.py --n-epochs 10 --model-type cnn --learning-rate 0.00001 >> training_log.log 2>&1
-python train.py --n-epochs 10 --model-type resnet --learning-rate 0.00001 >> training_log.log 2>&1
+python train.py --n-epochs 10 --model-type res --learning-rate 0.00001 >> training_log.log 2>&1
 python train.py --n-epochs 10 --hidden-sizes 200,1000,500,200,50 >> training_log.log 2>&1
 python train.py --n-epochs 10 --learning-rate 0.00001 --hidden-sizes 200,1000,500,200,50 >> training_log.log 2>&1
 python train.py --n-epochs 10 --batch-size 2 >> training_log.log 2>&1
