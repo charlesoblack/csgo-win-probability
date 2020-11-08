@@ -230,8 +230,6 @@ class CNN(torch.nn.Module):
 
     def forward(self, x):
 
-        x = x.unsqueeze(1)
-
         for block in self.conv_blocks:
             x = block(x)
 

@@ -81,7 +81,7 @@ def transform_data(df, game_map):
     n_samples = t.shape[0]
     result = torch.cat([t.reshape(n_samples, 100),
                         t_2.reshape(n_samples, 20)],
-                       dim=1).view(n_samples, 12, 10)
+                       dim=1).view(n_samples, 1, 12, 10)
 
     return result
 
