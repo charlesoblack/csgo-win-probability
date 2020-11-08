@@ -280,8 +280,7 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     loss_fn = torch.nn.BCELoss()
 
-    # init at 0 since any auc will be greater than 0
-    old_auc = 0
+    aucs = {}
 
     for i in range(args.n_epochs):
         print('\n' + '=' * 30)
@@ -299,13 +298,13 @@ if __name__ == '__main__':
                    device=device,
                    )
 
-        if old_auc > auc:
-            print(f'Early stopping at epoch {i}: old AUC {old_auc:.4f}, '
+        aucs[i] = auc
+
+        if i > 2 and all(aucs[x] > auc for x in range(i - 3, i)):
+            print(f'Early stopping at epoch {i}: old AUCs {aucs[i - 3]:.4f}, '
+                  f'{aucs[i - 2]:.4f}, {aucs[i - 1]:.4f}, '
                   f'new AUC {auc:.4f}.')
             break
-
-        # implicit else
-        old_auc = auc
 
     print('\n\n\n' + '+' * 30)
     print(f'Test set results for: {args}\n\n')
