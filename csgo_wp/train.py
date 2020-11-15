@@ -183,6 +183,11 @@ if __name__ == '__main__':
                         default='unsorted',
                         )
 
+    parser.add_argument('--early-stopping',
+                        type=bool,
+                        default=True,
+                        )
+
     args = parser.parse_args()
 
     if args.model_type not in ['fc', 'cnn', 'res']:
@@ -298,13 +303,15 @@ if __name__ == '__main__':
                    device=device,
                    )
 
-        aucs[i] = auc
+        if args.early_stopping:
+            aucs[i] = auc
 
-        if i > 2 and all(aucs[x] > auc for x in range(i - 3, i)):
-            print(f'Early stopping at epoch {i}: old AUCs {aucs[i - 3]:.4f}, '
-                  f'{aucs[i - 2]:.4f}, {aucs[i - 1]:.4f}, '
-                  f'new AUC {auc:.4f}.')
-            break
+            if i > 2 and all(aucs[x] > auc for x in range(i - 3, i)):
+                print(f'Early stopping at epoch {i}: old AUCs'
+                      f'{aucs[i - 3]:.4f}, '
+                      f'{aucs[i - 2]:.4f}, {aucs[i - 1]:.4f}, '
+                      f'new AUC {auc:.4f}.')
+                break
 
     print('\n\n\n' + '+' * 30)
     print(f'Test set results for: {args}\n\n')
