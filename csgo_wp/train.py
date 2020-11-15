@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 import torch
-from model import FCNN, CNN, ResNet
+from model import FCNN, CNN, ResNet, LR_CNN
 from sklearn.metrics import log_loss, roc_auc_score, accuracy_score
 
 
@@ -190,9 +190,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.model_type not in ['fc', 'cnn', 'res']:
+    if args.model_type not in ['fc', 'cnn', 'res', 'lrcnn']:
         print('Model type not supported, only one of'
-              ' "fc", "cnn", "res" allowed')
+              ' "fc", "cnn", "res", "lrcnn" allowed')
         sys.exit(1)
 
     if not all([len(x) == 8 for x in args.cnn_options]):
@@ -267,7 +267,7 @@ if __name__ == '__main__':
                                               num_workers=0,
                                               )
 
-    models = {'fc': FCNN, 'cnn': CNN, 'res': ResNet}
+    models = {'fc': FCNN, 'cnn': CNN, 'res': ResNet, 'lrcnn': LR_CNN}
 
     model = models[args.model_type](input_size=input_sizes[args.transform],
                                     hidden_sizes=args.hidden_sizes,
