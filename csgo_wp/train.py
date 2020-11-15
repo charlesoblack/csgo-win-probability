@@ -185,7 +185,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--early-stopping',
                         type=bool,
-                        default=True,
+                        default=False,
                         )
 
     args = parser.parse_args()
