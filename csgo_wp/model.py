@@ -300,6 +300,138 @@ class FCNN(torch.nn.Module):
         return x.squeeze(1)
 
 
+class LR_CNN(torch.nn.Module):
+
+    def __init__(self,
+                 input_size=(6, 5, 5),
+                 activation='ReLU',
+                 activation_params={},
+                 hidden_sizes=[200, 100, 50],
+                 output_size=1,
+                 batch_norm=False,
+                 dropout=False,
+                 cnn_options=((4, 6, 1, 1, 0, 1, 1, 0),),
+                 ):
+        super().__init__()
+
+        # dynamic linear stuff
+        self.linear_input_size = 2 * 5 * 5
+        self.cnn_input_size = input_size
+        self.output_size = output_size
+
+        self.bn_activated = batch_norm
+        self.dropout_activated = dropout
+
+        hidden_sizes.insert(0, self.linear_input_size)
+        hidden_sizes.append(self.output_size)
+
+        self.linear_blocks = torch.nn.ModuleList()
+        self.conv_blocks = torch.nn.ModuleList()
+
+        for input_size, output_size in pairwise(hidden_sizes):
+            # last unit: don't use activation
+            if output_size == self.output_size:
+                activation = 'Identity'
+            block = LinearBlock(input_size,
+                                output_size,
+                                activation,
+                                activation_params)
+            self.linear_blocks.append(block)
+
+            if self.bn_activated and output_size != self.output_size:
+                norm = torch.nn.BatchNorm1d(num_features=output_size)
+                self.linear_blocks.append(norm)
+
+            if self.dropout_activated and output_size != self.output_size:
+                dropout_block = torch.nn.Dropout()
+                self.linear_blocks.append(dropout_block)
+
+        block_output_size = self.cnn_input_size[1:]
+        n_channels = 1
+
+        for option_set in cnn_options:
+            block = ConvBlock(*option_set,
+                              activation,
+                              activation_params)
+            self.conv_blocks.append(block)
+
+            if self.bn_activated:
+                self.norm_conv = torch.nn.BatchNorm2d(option_set[1])
+                self.conv_blocks.append(self.norm_conv)
+            else:
+                self.norm_conv = torch.nn.Identity()
+
+            if self.dropout_activated:
+                dropout_block = torch.nn.Dropout2d()
+                self.conv_blocks.append(dropout_block)
+
+            # conv
+            block_output_size = ((block_output_size[0]
+                                  + 2 * option_set[4]
+                                  - option_set[2]) // option_set[3] + 1,
+                                 (block_output_size[1]
+                                  + 2 * option_set[4]
+                                  - option_set[2]) // option_set[3] + 1,
+                                 )
+
+            # pooling
+            block_output_size = ((block_output_size[0]
+                                  + 2 * option_set[7]
+                                  - option_set[5]) // option_set[6] + 1,
+                                 (block_output_size[1]
+                                  + 2 * option_set[7]
+                                  - option_set[5]) // option_set[6] + 1,
+                                 )
+
+            n_channels = option_set[1]
+
+        self.num_elements_output = int(block_output_size[0]
+                                       * block_output_size[1]
+                                       * n_channels)
+
+        # cnn linear section
+        self.cnn_linear = LinearBlock(self.num_elements_output,
+                                      self.output_size,
+                                      activation,
+                                      activation_params)
+
+        # after the concat
+        self.final_linear = LinearBlock(2, 1, activation, activation_params)
+
+        # sigmoid
+        self.sigmoid = torch.nn.Sigmoid()
+
+    def forward(self, x):
+
+        # divide input into cnn/fc sections
+        cnn_x = x[:, :4, :, :]
+        fc_x = x[:, 4:, :, :]
+
+        # cnn section
+
+        for block in self.conv_blocks:
+            cnn_x = block(cnn_x)
+
+        cnn_x = cnn_x.reshape(-1, self.num_elements_output)
+
+        cnn_x = self.cnn_linear(cnn_x)
+
+        # fc section
+
+        # flatten but keep batch size
+        fc_x = fc_x.flatten(start_dim=1)
+
+        for block in self.linear_blocks:
+            fc_x = block(fc_x)
+
+        x = torch.cat([cnn_x, fc_x], dim=1)
+        x = self.final_linear(x)
+
+        y = self.sigmoid(x)
+
+        return y.squeeze(1)
+
+
 if __name__ == '__main__':
 
     # dummy data for testing
@@ -327,6 +459,17 @@ if __name__ == '__main__':
     print('\nTesting ResNet')
 
     mod = ResNet(dropout=True)
+
+    res = mod(t).detach()
+
+    print(res.shape)
+    print(res)
+
+    print('\nTesting LR-CNN')
+
+    t = torch.rand(size=(5, 6, 5, 5))
+
+    mod = LR_CNN()
 
     res = mod(t).detach()
 
