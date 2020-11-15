@@ -315,7 +315,7 @@ class LR_CNN(torch.nn.Module):
         super().__init__()
 
         # dynamic linear stuff
-        self.linear_input_size = 2 * 5 * 5
+        self.linear_input_size = 10
         self.cnn_input_size = input_size
         self.output_size = output_size
 
@@ -406,6 +406,9 @@ class LR_CNN(torch.nn.Module):
         # divide input into cnn/fc sections
         cnn_x = x[:, :4, :, :]
         fc_x = x[:, 4:, :, :]
+
+        # shape: (batch_size, 2, 5)
+        fc_x = fc_x.diagonal(0, dim1=2, dim2=3)
 
         # cnn section
 
