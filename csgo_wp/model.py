@@ -309,7 +309,7 @@ class LR_CNN(torch.nn.Module):
                  hidden_sizes=[200, 100, 50],
                  output_size=1,
                  batch_norm=False,
-                 dropout=False,
+                 dropout=False,  # for compatibility
                  cnn_options=((4, 6, 1, 1, 0, 1, 1, 0),),
                  ):
         super().__init__()
@@ -318,9 +318,6 @@ class LR_CNN(torch.nn.Module):
         self.linear_input_size = 10
         self.cnn_input_size = input_size
         self.output_size = output_size
-
-        self.bn_activated = batch_norm
-        self.dropout_activated = dropout
 
         hidden_sizes.insert(0, self.linear_input_size)
         hidden_sizes.append(self.output_size)
@@ -338,11 +335,11 @@ class LR_CNN(torch.nn.Module):
                                 activation_params)
             self.linear_blocks.append(block)
 
-            if self.bn_activated and output_size != self.output_size:
+            if output_size != self.output_size:
                 norm = torch.nn.BatchNorm1d(num_features=output_size)
                 self.linear_blocks.append(norm)
 
-            if self.dropout_activated and output_size != self.output_size:
+            if output_size != self.output_size:
                 dropout_block = torch.nn.Dropout()
                 self.linear_blocks.append(dropout_block)
 
@@ -355,15 +352,8 @@ class LR_CNN(torch.nn.Module):
                               activation_params)
             self.conv_blocks.append(block)
 
-            if self.bn_activated:
-                self.norm_conv = torch.nn.BatchNorm2d(option_set[1])
-                self.conv_blocks.append(self.norm_conv)
-            else:
-                self.norm_conv = torch.nn.Identity()
-
-            if self.dropout_activated:
-                dropout_block = torch.nn.Dropout2d()
-                self.conv_blocks.append(dropout_block)
+            self.norm_conv = torch.nn.BatchNorm2d(option_set[1])
+            self.conv_blocks.append(self.norm_conv)
 
             # conv
             block_output_size = ((block_output_size[0]
