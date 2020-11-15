@@ -436,7 +436,7 @@ if __name__ == '__main__':
 
     # dummy data for testing
     # (n_samples, 12, 10)
-    t = torch.rand(size=(5, 12, 10))
+    t = torch.rand(size=(5, 1, 12, 10))
 
     print('Testing FCNN')
 
