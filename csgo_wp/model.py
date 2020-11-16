@@ -311,6 +311,7 @@ class LR_CNN(torch.nn.Module):
                  batch_norm=False,
                  dropout=False,  # for compatibility
                  cnn_options=((4, 6, 1, 1, 0, 1, 1, 0),),
+                 ablation=None,
                  ):
         super().__init__()
 
@@ -318,6 +319,7 @@ class LR_CNN(torch.nn.Module):
         self.linear_input_size = 10
         self.cnn_input_size = input_size
         self.output_size = output_size
+        self.ablation = ablation
 
         hidden_sizes.insert(0, self.linear_input_size)
         hidden_sizes.append(self.output_size)
@@ -386,7 +388,14 @@ class LR_CNN(torch.nn.Module):
                                       activation_params)
 
         # after the concat
-        self.final_linear = LinearBlock(2, 1, activation, activation_params)
+        if ablation is not None:
+            concat_size = 1
+        else:
+            concat_size = 2
+        self.final_linear = LinearBlock(concat_size,
+                                        1,
+                                        activation,
+                                        activation_params)
 
         # sigmoid
         self.sigmoid = torch.nn.Sigmoid()
@@ -417,7 +426,13 @@ class LR_CNN(torch.nn.Module):
         for block in self.linear_blocks:
             fc_x = block(fc_x)
 
-        x = torch.cat([cnn_x, fc_x], dim=1)
+        if self.ablation is None:
+            x = torch.cat([cnn_x, fc_x], dim=1)
+        elif self.ablation == 'distance':
+            x = fc_x
+        elif self.ablation == 'player_count':
+            x = cnn_x
+
         x = self.final_linear(x)
 
         y = self.sigmoid(x)
