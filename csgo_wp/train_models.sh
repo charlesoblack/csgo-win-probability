@@ -83,3 +83,10 @@ python train.py --transform channels --n-epochs 100 --model-type lrcnn --cnn-opt
 python train.py --transform channels --n-epochs 100 --model-type lrcnn --cnn-options "4,15,1,1,0,1,1,0|15,6,5,1,0,1,1,0" --activation LeakyReLU --learning-rate 0.00001 --batch-size 64 >> training_log_lrcnn.log 2>&1
 python train.py --transform channels --n-epochs 100 --model-type lrcnn --cnn-options "4,6,1,1,0,1,1,0|6,6,1,1,0,1,1,0|6,6,5,1,0,1,1,0" --activation LeakyReLU --learning-rate 0.00001 --batch-size 64 >> training_log_lrcnn.log 2>&1
 python train.py --transform channels --n-epochs 100 --model-type lrcnn --cnn-options "4,6,1,1,0,1,1,0|6,6,5,1,0,1,1,0" --activation LeakyReLU --learning-rate 0.000001 --batch-size 96 >> training_log_lrcnn_2.log 2>&1
+
+# early stopping of best model
+python train.py --transform channels --n-epochs 100 --early-stopping True --model-type lrcnn --cnn-options "4,6,1,1,0,1,1,0|6,6,1,1,0,1,1,0|6,6,5,1,0,1,1,0" --activation LeakyReLU --learning-rate 0.000001 --batch-size 64 >> training_log_16.log 2>&1
+
+# ablation
+python train_ablation.py --ablation distance >> training_log_ablation.log 2>&1
+python train_ablation.py --ablation player_count >> training_log_ablation.log 2>&1
