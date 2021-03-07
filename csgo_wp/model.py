@@ -440,6 +440,105 @@ class LR_CNN(torch.nn.Module):
         return y.squeeze(1)
 
 
+class NFL_NN(torch.nn.Module):
+
+    def __init__(self,
+                 input_size=(1, 12, 10),
+                 activation='ReLU',
+                 activation_params={},
+                 hidden_sizes=[200, 100, 50],
+                 output_size=1,
+                 batch_norm=False,
+                 dropout=False,
+                 cnn_options=tuple(),
+                 ):
+        super().__init__()
+
+        # all of the function params are unused
+        # we're just doing the same model as:
+        # https://github.com/juancamilocampos/nfl-big-data-bowl-2020/blob/master/1st_place_zoo_solution_v2.ipynb
+
+        self.conv1 = torch.nn.Conv2d(10, 128, kernel_size=1, stride=1)
+        self.conv2 = torch.nn.Conv2d(128, 160, kernel_size=1, stride=1)
+        self.conv3 = torch.nn.Conv2d(160, 128, kernel_size=1, stride=1)
+
+        self.maxpool1 = torch.nn.MaxPool2d(kernel_size=(1, 5))
+        self.avgpool1 = torch.nn.AvgPool2d(kernel_size=(1, 5))
+
+        self.norm1 = torch.nn.BatchNorm1d(num_features=128)
+
+        self.conv4 = torch.nn.Conv1d(128, 160, kernel_size=1, stride=1)
+        self.norm2 = torch.nn.BatchNorm1d(num_features=160)
+        self.conv5 = torch.nn.Conv1d(160, 96, kernel_size=1, stride=1)
+        self.norm3 = torch.nn.BatchNorm1d(num_features=96)
+        self.conv6 = torch.nn.Conv1d(96, 96, kernel_size=1, stride=1)
+        self.norm4 = torch.nn.BatchNorm1d(num_features=96)
+
+        self.maxpool2 = torch.nn.MaxPool1d(kernel_size=11)
+        self.avgpool2 = torch.nn.AvgPool1d(kernel_size=11)
+
+        self.fc1 = torch.nn.Linear(96, 96)
+        self.norm5 = torch.nn.BatchNorm1d(num_features=96)
+        self.fc2 = torch.nn.Linear(96, 256)
+        self.norm6 = torch.nn.LayerNorm(normalized_shape=256)
+        self.dropout = torch.nn.Dropout(0.3)
+        self.fc3 = torch.nn.Linear(256, 2)
+
+        self.relu = torch.nn.ReLU()
+
+        self.softmax = torch.nn.Softmax(dim=1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.relu(x)
+
+        x = self.conv2(x)
+        x = self.relu(x)
+
+        x = self.conv3(x)
+        x = self.relu(x)
+
+        xmax = self.maxpool1(x) * 0.3
+        xavg = self.avgpool1(x) * 0.7
+        x = xmax + xavg
+
+        x = x.squeeze()
+        x = self.norm1(x)
+
+        x = self.conv4(x)
+        x = self.relu(x)
+        x = self.norm2(x)
+
+        x = self.conv5(x)
+        x = self.relu(x)
+        x = self.norm3(x)
+
+        x = self.conv6(x)
+        x = self.relu(x)
+        x = self.norm4(x)
+
+        xmax = self.maxpool1(x) * 0.3
+        xavg = self.avgpool1(x) * 0.7
+        x = xmax + xavg
+
+        x = x.squeeze()
+
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.norm5(x)
+
+        x = self.fc2(x)
+        x = self.relu(x)
+        x = self.norm6(x)
+        x = self.dropout(x)
+
+        x = self.fc3(x)
+
+        x = self.softmax(x)
+
+        return x[:, 1]
+
+
 if __name__ == '__main__':
 
     # dummy data for testing
@@ -478,6 +577,17 @@ if __name__ == '__main__':
     t = torch.rand(size=(5, 6, 5, 5))
 
     mod = LR_CNN()
+
+    res = mod(t).detach()
+
+    print(res.shape)
+    print(res)
+
+    print('\nTesting NFL-NN')
+
+    t = torch.rand(size=(5, 10, 5, 5))
+
+    mod = NFL_NN()
 
     res = mod(t).detach()
 
