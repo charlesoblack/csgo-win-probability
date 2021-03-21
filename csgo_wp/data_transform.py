@@ -365,6 +365,11 @@ class CSGODataset(torch.utils.data.Dataset):
                                       'AreaId',
                                       'IsAlive',
                                       'Side',
+                                      'Hp',
+                                      'Armor',
+                                      'EqValue',
+                                      'DistToBombsiteA',
+                                      'DistToBombsiteB',
                                       ])
 
             print('Getting match/map combinations...')
