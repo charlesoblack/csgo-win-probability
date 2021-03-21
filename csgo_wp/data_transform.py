@@ -25,6 +25,10 @@ def area_dist_all(x, game_map):
                          )
 
 
+def attr_diff(x):
+    return x.values[0][0] - x.values[0][1]
+
+
 def is_alive(x):
     return x > 0
 
@@ -171,6 +175,95 @@ def transform_multichannel(df, game_map):
 
     result = torch.cat([t, t_2, t_3],
                        dim=1).view(-1, 6, 5, 5)
+
+    return result
+
+
+def transform_nfl(df, game_map):
+    merged = df.merge(df, on='Tick')
+    merged['pos_diff'] = merged[['pos_x', 'pos_y']].values.tolist()
+    merged['area_diff'] = merged[['AreaId_x', 'AreaId_y']].values.tolist()
+    merged['hp_diff'] = merged[['Hp_x', 'Hp_y']].values.tolist()
+    merged['armor_diff'] = merged[['Armor_x', 'Armor_y']].values.tolist()
+    merged['equip_diff'] = merged[['EqValue_x', 'EqValue_y']].values.tolist()
+    merged['bombA_diff'] = merged[['DistToBombsiteA_x',
+                                   'DistToBombsiteA_y']].values.tolist()
+    merged['bombB_diff'] = merged[['DistToBombsiteB_x',
+                                   'DistToBombsiteB_y']].values.tolist()
+
+    area_dist = partial(area_dist_all, game_map=game_map)
+
+    distance_matrix = merged.pivot_table(index=['Tick', 'PlayerSteamId_x'],
+                                         columns='PlayerSteamId_y',
+                                         values='area_diff',
+                                         aggfunc=area_dist,
+                                         )
+
+    hp_matrix = merged.pivot_table(index=['Tick', 'PlayerSteamId_x'],
+                                   columns='PlayerSteamId_y',
+                                   values='hp_diff',
+                                   aggfunc=attr_diff,
+                                   )
+
+    armor_matrix = merged.pivot_table(index=['Tick', 'PlayerSteamId_x'],
+                                      columns='PlayerSteamId_y',
+                                      values='armor_diff',
+                                      aggfunc=attr_diff,
+                                      )
+
+    equip_matrix = merged.pivot_table(index=['Tick', 'PlayerSteamId_x'],
+                                      columns='PlayerSteamId_y',
+                                      values='equip_diff',
+                                      aggfunc=attr_diff,
+                                      )
+
+    bombA_matrix = merged.pivot_table(index=['Tick', 'PlayerSteamId_x'],
+                                      columns='PlayerSteamId_y',
+                                      values='bombA_diff',
+                                      aggfunc=attr_diff,
+                                      )
+
+    bombB_matrix = merged.pivot_table(index=['Tick', 'PlayerSteamId_x'],
+                                      columns='PlayerSteamId_y',
+                                      values='bombB_diff',
+                                      aggfunc=attr_diff,
+                                      )
+
+    t_players = np.sort(df[df['Side'] == 'T']['PlayerSteamId']
+                        .unique()
+                        ).tolist()
+    ct_players = np.sort(df[df['Side'] == 'CT']['PlayerSteamId']
+                         .unique()
+                         ).tolist()
+
+    matrices = [hp_matrix,
+                armor_matrix,
+                equip_matrix,
+                bombA_matrix,
+                bombB_matrix,
+                distance_matrix,
+                ]
+
+    channels = []
+
+    for matrix in matrices:
+        matrix.reset_index(level=1, drop=False, inplace=True)
+
+        ct_rows = matrix['PlayerSteamId_x'].isin(ct_players)
+
+        channel = torch.Tensor(matrix[ct_rows][t_players].values)
+        channels.append(channel.view(-1, 5, 5))
+
+    # BA distances
+    ba_t_rows = matrices[0]['PlayerSteamId_x'].isin(t_players)
+
+    ba_channel = torch.Tensor(matrices[0][ba_t_rows][ct_players].values)
+    ba_channel = ba_channel.view(-1, 5, 5)
+    ba_channel = ba_channel.transpose(1, 2)
+    channels.append(ba_channel)
+
+    # (batch_size, 7, 5, 5)
+    result = torch.stack(channels, dim=1)
 
     return result
 
