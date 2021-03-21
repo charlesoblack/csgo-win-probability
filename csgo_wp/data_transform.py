@@ -180,6 +180,32 @@ def transform_multichannel(df, game_map):
 
 
 def transform_nfl(df, game_map):
+
+    df.drop_duplicates(inplace=True)
+
+    for c in ['X', 'Y', 'Z']:
+        df[c] = df[c].astype(float)
+
+    df['AreaId'] = df['AreaId'].astype(int)
+    df['IsAlive'] = df['IsAlive'].astype(bool)
+
+    df = df[['Side',
+             'IsAlive',
+             'PlayerSteamId',
+             'X',
+             'Y',
+             'Z',
+             'Tick',
+             'AreaId',
+             'Hp',
+             'Armor',
+             'EqValue',
+             'DistToBombsiteA',
+             'DistToBombsiteB',
+             ]]
+    # TODO: fix SettingWithCopy warning
+    df['pos'] = df[['X', 'Y', 'Z']].values.tolist()
+
     merged = df.merge(df, on='Tick')
     merged['pos_diff'] = merged[['pos_x', 'pos_y']].values.tolist()
     merged['area_diff'] = merged[['AreaId_x', 'AreaId_y']].values.tolist()
