@@ -458,7 +458,7 @@ class NFL_NN(torch.nn.Module):
         # we're just doing the same model as:
         # https://github.com/juancamilocampos/nfl-big-data-bowl-2020/blob/master/1st_place_zoo_solution_v2.ipynb
 
-        self.conv1 = torch.nn.Conv2d(10, 128, kernel_size=1, stride=1)
+        self.conv1 = torch.nn.Conv2d(7, 128, kernel_size=1, stride=1)
         self.conv2 = torch.nn.Conv2d(128, 160, kernel_size=1, stride=1)
         self.conv3 = torch.nn.Conv2d(160, 128, kernel_size=1, stride=1)
 
@@ -585,7 +585,7 @@ if __name__ == '__main__':
 
     print('\nTesting NFL-NN')
 
-    t = torch.rand(size=(5, 10, 5, 5))
+    t = torch.rand(size=(5, 7, 5, 5))
 
     mod = NFL_NN()
 
