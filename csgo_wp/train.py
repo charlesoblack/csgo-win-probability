@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 import torch
-from model import FCNN, CNN, ResNet, LR_CNN
+from model import FCNN, CNN, ResNet, LR_CNN, NFL_NN
 from sklearn.metrics import log_loss, roc_auc_score, accuracy_score
 
 
@@ -112,7 +112,7 @@ def test_train_functions(train_dataset, val_dataset, test_dataset):
 
 if __name__ == '__main__':
     from data_transform import CSGODataset, transform_data
-    from data_transform import transform_multichannel
+    from data_transform import transform_multichannel, transform_nfl
     import sys
     import argparse
     import warnings
@@ -190,9 +190,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.model_type not in ['fc', 'cnn', 'res', 'lrcnn']:
+    if args.model_type not in ['fc', 'cnn', 'res', 'lrcnn', 'nfl']:
         print('Model type not supported, only one of'
-              ' "fc", "cnn", "res", "lrcnn" allowed')
+              ' "fc", "cnn", "res", "lrcnn", "nfl" allowed')
         sys.exit(1)
 
     if not all([len(x) == 8 for x in args.cnn_options]):
@@ -215,16 +215,18 @@ if __name__ == '__main__':
         print('Invalid learning rate passed in: must be positive')
         sys.exit(1)
 
-    if args.transform not in ['unsorted', 'channels']:
+    if args.transform not in ['unsorted', 'channels', 'nfl']:
         print('Invalid transform passed')
         sys.exit(1)
 
     transforms = {'unsorted': transform_data,
                   'channels': transform_multichannel,
+                  'nfl': transform_nfl,
                   }
 
     input_sizes = {'unsorted': (1, 12, 10),
                    'channels': (6, 5, 5),
+                   'nfl': tuple(),
                    }
 
     transform = transforms[args.transform]
@@ -267,7 +269,12 @@ if __name__ == '__main__':
                                               num_workers=0,
                                               )
 
-    models = {'fc': FCNN, 'cnn': CNN, 'res': ResNet, 'lrcnn': LR_CNN}
+    models = {'fc': FCNN,
+              'cnn': CNN,
+              'res': ResNet,
+              'lrcnn': LR_CNN,
+              'nfl': NFL_NN,
+              }
 
     model = models[args.model_type](input_size=input_sizes[args.transform],
                                     hidden_sizes=args.hidden_sizes,
